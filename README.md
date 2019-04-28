@@ -67,10 +67,16 @@ Some costs to a user may be the result of someone else's actions, such as when a
     * Notify account owner (depending on preferences)
     * Update index of follows with new profile data
     * If post contains user tags referencing this account
-      * Creates/updates/deletes a “post” DynamoDB entry within this account
-      * Copies any attached media to this account’s S3 bucket so now it’s subject to this account’s sharing preferences
+      * Creates/updates/deletes a “post” DynamoDB entry within this account, referencing tagged content, flagged as unpublished (nobody else can view)
+      * Notify user account, store only a reference to the tagged content in the "posts" table
+  * Tagged content rejected
+    * Remove unpublished content
+  * Tagged content accepted
+    * Copies any attached media to this account’s S3 bucket so now it’s subject to this account’s sharing preferences
+    * Updates "post" entry to reference account-owned content, removes unpublished flag
   * Image/video uploaded
     * Listens to S3 bucket SNS topics and automatically does post-processing on uploaded images/videos (e.g. creating thumbnails)
       * AWS might provide some out-of-the-box solution for this
   * Create/update/delete post (listens to DynamoDB posts table changes)
     * Publishes to appropriate SNS topics (there may be different topics depending on whether post is text/image/video/etc…)
+      * Only do this if unpublished flag isn't set, or it's being removed
