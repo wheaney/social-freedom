@@ -1,5 +1,7 @@
 # social-freedom
-Open-source social networking framework where each user owns their infrastructure, thus all of their data and costs of ownership. A thin "federal" account orchestrates this by providing identity sign-in/up functionality, and identity to infrastructure account mappings, as well as a search index so users can find other accounts based on metadata that account has chosen to make searchable (if any).
+Open-source social networking framework where each user account owns their infrastructure, thus all of their data and costs of ownership. A thin "federal" account orchestrates this by providing identity sign-in/up functionality, and identity to infrastructure account mappings, as well as a search index so users can find other accounts based on metadata that account has chosen to make searchable.
+
+Participation in the profile/account search index would be optional, making it so that accounts can essentially remain anonymous to the federal layer and central ownership is extremely minimal. Accounts not in the index would be able to exchange follows in-person via a scannable code.
 
 # Insfrastructure Details
 Here is what the Federal and User-owned infrastructure accounts would maintain. Current assumption is AWS is used for infrastructure of all accounts.
@@ -20,7 +22,11 @@ Here is what the Federal and User-owned infrastructure accounts would maintain. 
   * Account profile updated, SNS topic subscription
     * Update account search index
 
-## User accounts
+## User accounts, 1 AWS account per user
+User owns their AWS account, which includes all their posts and uploads, and they are responsible for providing their own payment information. Account usage should be designed to take advantage of AWS Free Tier to the extent possible, ideally costing users less than $1 per month.
+
+Some costs to a user may be the result of someone else's actions, such as when a follower views their posts or media, or updates to a followed account results in updates to their news feed index. It would probably be encouraged that users set a spending cap on their account to limit any chance of unexpected runaway costs.
+
 * ElasticSearch index of news feed entries (optional)
 * ElasticSearch index of follows
   * Alternatively, DynamoDB table, scanning is slower
