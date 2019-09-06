@@ -109,3 +109,7 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Clearing/archiving news feed entries based on account preferences
   * Probably something to monitor account costs and notify user account if certain thresholds are hit?
     
+# Deployments
+There needs to be a way for code changes to the infrastructure (federal or user) to get propagated out to all AWS accounts. 
+This can probably be done by creating a Code pipeline within AWS accounts, CodeBuild can be hooked into the GitHub repo
+and run the relevant CDK command, etc...

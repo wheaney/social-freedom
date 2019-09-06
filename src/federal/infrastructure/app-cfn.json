@@ -1,0 +1,16 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Infrastructure that can't be defined in the Typescript CDK",
+  "Resources": {
+    "ElasticSearch": {
+      "Type": "AWS::Elasticsearch::Domain",
+      "Properties": {
+        "ElasticsearchVersion": "6.5",
+        "ElasticsearchClusterConfig": {
+          "InstanceCount" : 1,
+          "InstanceType" : "m3.medium.elasticsearch"
+        }
+      }
+    }
+  }
+}
