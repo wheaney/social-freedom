@@ -27,30 +27,22 @@ The central account whose main duty is to orchestrate the sign-in and then deleg
     * Update profile updated SNS topic subscription above, based on account prefs
 
 ## User accounts, 1 AWS account per user
-User owns their AWS account, which includes all their posts and uploads, and they are responsible for providing their own payment information. Account usage should be designed to take advantage of AWS Free Tier to the extent possible, ideally costing users less than $1 per month. ElasticSearch is cost prohibitive after 12 months, so the ideal infrastructure won't rely on it; preferring Amazon Aurora for any storage that needs to support querying and returning multiple rows.
-
-Aurora offers an interesting challenge if we choose to allow friend accounts direct read access to the database tables, and insert access for creating posts comments:
-* What if I want to create a post that only some subset of my friends can see?
-* We want friends to be able to edit their own posts on your page (if friend-created posts are a thing), but not any other posts.
-* We want to be able to rate-limit insertions/updates from other users, so someone can't maliciously create a million DB entries and spike up your AWS costs.
-
-Possible solutions:
-* Utilize DB views to enforce read-permissions (different views for different groups)
-* Disallow direct DB connections from friend accounts, instead create an API backed by Lambdas that can query the database. Lambda is an another cost in addition to DB queries so we'd want these functions to do simple SQL generation with qualifiers for filtering by permissions.
-  * API Gateway usage plans would allow for throttling of write requests
-* Don't allow direct posts to another account, instead users may "tag" their friends in posts and also update tagged posts. This allows for these posts/updates to propagate to another account via an existing mechanism from media posts. But it doesn't solve the need for throttling (the SNS subscription lambdas could enforce this themselves, though).
-
+User owns their AWS account, which includes all their posts and uploads, and they are responsible for providing their own payment information. Account usage should be designed to take advantage of AWS Free Tier to the extent possible, ideally costing users less than $1 per month.
 
 Some costs to a user may be the result of someone else's actions, such as when a follower views their posts or media, or updates to a followed account results in updates to their news feed index. It would probably be encouraged that users set a spending cap on their account to limit any chance of unexpected runaway costs.
 
-* Aurora table of news feed entries
+* DynamoDB table containing news feed entries
   * Entries are essentially updates from all subscription topics
-  * Aurora is ~$0.11 per GB stored monthly, but someone with lots of follows/friends may accumulate a lot of data here, a couple options:
-    * We periodically drop entries older then X days
-    * Alternatively, archive them to S3
-* Aurora table of follows/friends
-  * Could minimally just be account IDs, but may also cache some critical profile data (e.g. name)
-    * If it's as simple as just account IDs, could just be a file in S3, but since we'll already have Aurora tables, the data storage for this would be negligible -- no chance to increase costs, so we may as well put it here.
+  * We'd want to use a sort key here that's auto-incrementing, this would allow us to use the Query
+  action to grab the last X entries in descending order to build the news feed
+  * Since we'd be relying on a sort key here to make the Query operation feasible, the primary key would
+  probably need to be a hardcoded value. Since all news feed entries would share this hardcoded primary
+  key, there's no reason we couldn't share this Dynamo table with others that have this same usage pattern
+  (like posts and post comments).
+    * One possible reason to have this in its own table is ease of access control, since the policy 
+    on these entries would never allow access outside this account
+* S3 object containing friends/follows
+  * Simple list of account IDs
 * S3 bucket(s) for images/video
   * CloudFront (optional for images? Required for video)
   * Auto-publishes to SNS topics for object creation events
@@ -59,23 +51,46 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Profile auto-publishes to SNS topic (optional, depends on account prefs)
   * Could use DynamoDB for this but S3 will do the auto-publish to SNS
   * Might just use one bucket for this and the images/video, organized by directories within the bucket
-* Aurora table of posts
+* DynamoDB table of posts
   * Stores metadata for all text and media posts
   * All posts can contain tags of other users, tags for categorization (including albums for media), and location data
   * An entry may get created from another users’ post (user tags), so “origin account id” is an optional field
   * Links to S3 files, for media
-    * Should only ever link to media within this account, if we copy tagged posts
-* Aurora table of activities on a post
+    * This should only ever link to media within this account, if we copy the media from tagged posts
+  * Same storage strategy as news feed entries: hardcoded primary key and usage of an auto-incrementing 
+  sort key to allow for Query to grab the X most recent
+* DynamoDB table of activities on a post
   * Stores metadata regarding all reactions/comments to a post
-  * Hash and range key, referencing post key and sort key of creation timestamp
+  * Same storage strategy as news feed entries: hardcoded primary key and usage of an auto-incrementing 
+  sort key to allow for Query to grab the X most recent
 * IAM roles for different permission levels
 * IAM groups for friends and other allowed follows
   * Accepting a friend/follow request adds the identity to this group
   * Could allow for creation of multiple groups, would work similar to Google Plus’ circles
 * Lambdas
+  * Requesting a follow
+    * Add the account ARN to an IAM Group for follows, would need to provide access to the "Follow accepted" 
+    Lambda or SNS topic
+    * Directly trigger a Lambda or publish to known SNS topic in the account you want to follow
+      * Would require that this Lambda ARN is deterministic, should be achievable if we know the account
+      ARN and the Lambda function name never changes
+      * One of the parameters here might be the ARN to the Lambda that the other account should
+      eventually call if the response is PENDING
+        * Not entirely necessary if the Lambda ARN is deterministic as described above
+  * Receiving a follow request
+    * One of 3 return values: DENIED, PENDING, and ACCEPTED
+      * DENIED if the requesting account is already blocked or this user account otherwise is set to
+      auto-deny
+      * ACCEPTED if no auto-deny conditions are met and this user account is completely public
+        * Sort of a Twitter-style account, follow requests don't require acceptance
+      * PENDING if neither of the above
+        * Add this account ARN to a list somewhere for review on next log-in
   * Accepting a follow
-    * Adds cognito identity to appropriate IAM group
-    * Notifies following account of add (SNS publish)
+    * Adds Cognito identity to appropriate IAM group, granting subscribe permissions to SNS topics
+    and read permissions to posts and comments
+    * Directly trigger Lambda or publish to known SNS topic in the requesting account
+  * Denying a following
+    * Directly trigger Lambda or publish to known SNS topic in the requesting account
   * Follow accepted, SNS topic subscription
     * Create subscription for news feed updates (optional, depends on account prefs)
     * Notify account owner (depending on account settings)
@@ -113,3 +128,20 @@ Some costs to a user may be the result of someone else's actions, such as when a
 There needs to be a way for code changes to the infrastructure (federal or user) to get propagated out to all AWS accounts. 
 This can probably be done by creating a Code pipeline within AWS accounts, CodeBuild can be hooked into the GitHub repo
 and run the relevant CDK command, etc...
+
+# Open Questions
+* Cross-region account communications, what's feasible?
+  * Lambdas can subscribe to SNS topics in any region
+* How does blocking someone work? If I comment on a friend's post, that comment (per current design) 
+would be stored in that friend's AWS account, but would need to be kept apprised of who my account
+is currently blocking (even if that changes after I make the comment). This needs further thought. A 
+couple possible solutions:
+  * "Comment at your own risk" - comments on someone else's post is visible to anyone that can see that 
+  post, no other conditions applied
+  * Instead of direct DynamoDB access for all followers/friends of an account, put this access behind
+  an API with some thin compute layer (Lambda) that does some additional (not AWS out-of-the-box) 
+  access control check. This could be as complex as referencing policies in other accounts, or as
+  simple as comparing to a blacklist of account IDs that were snapshotted at the time of the comment
+  (snapshotting in this case implies that the blacklist won't stay updated if more accounts are blocked).
+* Any downside to directly triggering Lambda's across accounts? Is this less failure-proof than an publishing
+to an SNS topic or SQS queue in that account?
