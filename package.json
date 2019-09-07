@@ -5,9 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "prebuild": "rm -rf dist",
     "build": "tsc",
     "watch": "tsc -w",
-    "cdk": "cdk -v -a \"ts-node ./src/federal/infrastructure/app.ts\" list"
+    "federalstackcheck": "npm run build && cdk -v -a \"ts-node ./src/federal/infrastructure/app.ts\" list",
+    "federalstackdeploy": "npm run build && cdk -v -a \"ts-node ./src/federal/infrastructure/app.ts\" deploy",
+    "userstackcheck": "npm run build && cdk -v -a \"ts-node ./src/user/infrastructure/app.ts\" list",
+    "userstackdeploy": "npm run build && cdk -v -a \"ts-node ./src/user/infrastructure/app.ts\" deploy"
   },
   "repository": {
     "type": "git",
@@ -20,7 +24,7 @@
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "devDependencies": {
-    "@types/node": "8.10.45",
+    "@types/node": "^8.10.53",
     "aws-cdk": "^0.29.0",
     "ts-node": "^8.3.0",
     "typescript": "^3.6.2"

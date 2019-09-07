@@ -85,11 +85,11 @@ Some costs to a user may be the result of someone else's actions, such as when a
         * Sort of a Twitter-style account, follow requests don't require acceptance
       * PENDING if neither of the above
         * Add this account ARN to a list somewhere for review on next log-in
-  * Accepting a follow
+  * Accepting a follow request
     * Adds Cognito identity to appropriate IAM group, granting subscribe permissions to SNS topics
     and read permissions to posts and comments
     * Directly trigger Lambda or publish to known SNS topic in the requesting account
-  * Denying a following
+  * Denying a follow request
     * Directly trigger Lambda or publish to known SNS topic in the requesting account
   * Follow accepted, SNS topic subscription
     * Create subscription for news feed updates (optional, depends on account prefs)
@@ -128,6 +128,24 @@ Some costs to a user may be the result of someone else's actions, such as when a
 There needs to be a way for code changes to the infrastructure (federal or user) to get propagated out to all AWS accounts. 
 This can probably be done by creating a Code pipeline within AWS accounts, CodeBuild can be hooked into the GitHub repo
 and run the relevant CDK command, etc...
+
+# Testing and deploying CDK changes in dev
+1. Make sure you've configured your AWS CLI (you should have files present in ~/.aws) to use your own
+personal AWS account
+2. Use `npm run` with the `userstackcheck` or `federalstackcheck` targets. This will:
+  * Compile your Lambda definitions into JS using `tsc`
+  * Use the CDK command-line tool to load the desired stack
+  * Run the `list` command on that stack. The output will simply be the name of the stack.
+3. Use `npm run` with the `userstackdeploy` or `federalstackdeploy` targets. This will do the same as 
+above, but will use the `deploy` CDK command on the stack, which will deploy to your personal AWS account.
+4. Be sure to revert the CloudFormation deployment when you're done for the day so you don't accumulate
+charges for any per-hour services (e.g. ElasticSearch).
+  * Alternatively, comment out any such infrastructure from your CDK code prior to Step #3 to prevent
+  it from being deployed.
+
+Note that these targets won't be used as a long-term deployment strategy to "production" federal or 
+user AWS accounts. They're mostly intended for dev, but may be useful for the first-time setup of the
+federal account.
 
 # Open Questions
 * Cross-region account communications, what's feasible?

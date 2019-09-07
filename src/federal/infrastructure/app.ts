@@ -10,9 +10,10 @@ new cdk.Include(stack, "OtherInfrastructure", {
     template: JSON.parse(fs.readFileSync("./src/federal/infrastructure/app-cfn.json").toString())
 });
 
+// Lambda references assume that tsc has compiled all *.ts files to the dist directory
 new LambdaFunction(stack, 'HelloHandler', {
     runtime: Runtime.NodeJS810,
-    code: Code.inline(fs.readFileSync('./src/federal/infrastructure/lambdas/test.js').toString()),
+    code: Code.inline(fs.readFileSync('./dist/federal/infrastructure/lambdas/test.js').toString()),
     handler: 'index.handler'
 });
 
