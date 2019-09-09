@@ -2,6 +2,7 @@ import 'source-map-support/register';
 import * as cdk from "@aws-cdk/core";
 import {Code, Runtime, Function as LambdaFunction} from "@aws-cdk/aws-lambda";
 import {Table, AttributeType} from "@aws-cdk/aws-dynamodb"
+import {PolicyStatement} from "@aws-cdk/aws-iam"
 import * as fs from "fs";
 
 const app = new cdk.App();
@@ -43,18 +44,27 @@ new cdk.CfnInclude(stack, "OtherInfrastructure", {
 });
 
 // Lambda references assume that tsc has compiled all *.ts files to the dist directory
-new LambdaFunction(stack, 'HelloHandler', {
+const AccountRegistrationLambda = new LambdaFunction(stack, 'AccountRegistrationHandler', {
     runtime: Runtime.NODEJS_8_10,
-    code: Code.inline(fs.readFileSync('./dist/federal/infrastructure/lambdas/test.js').toString()),
+    code: Code.fromInline(fs.readFileSync('./dist/src/federal/infrastructure/lambdas/account-registration/index.js').toString()),
     handler: 'index.handler'
 });
 
-new Table(stack, "IdentityToAccount", {
+const IdentityToAccountTable = new Table(stack, "IdentityToAccount", {
     partitionKey: {
         name: "identity",
         type: AttributeType.STRING
     },
     tableName: "IdentityToAccount"
 })
+
+if (AccountRegistrationLambda.role) {
+    AccountRegistrationLambda.role.addToPolicy(new PolicyStatement({
+        resources: [IdentityToAccountTable.tableArn],
+        actions: ['dynamodb:putItem']
+    }));
+} else {
+    throw new Error("AccountRegistrationLambda role is undefined")
+}
 
 app.synth()

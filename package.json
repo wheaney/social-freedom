@@ -4,7 +4,7 @@
   "description": "Open-source social networking framework where each user account owns their infrastructure",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "prebuild": "rm -rf dist",
     "build": "tsc",
     "watch": "tsc -w",
@@ -24,8 +24,13 @@
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.31",
+    "@types/jest": "^24.0.18",
     "@types/node": "^8.10.53",
     "aws-cdk": "^1.7.0",
+    "aws-sdk-mock": "^4.5.0",
+    "jest": "^24.9.0",
+    "ts-jest": "^24.0.2",
     "ts-node": "^8.3.0",
     "typescript": "^3.6.2"
   },
@@ -35,6 +40,7 @@
     "@aws-cdk/core": "^1.7.0",
     "@aws-cdk/cx-api": "^1.7.0",
     "@aws-cdk/region-info": "^1.7.0",
+    "aws-sdk": "^2.525.0",
     "source-map-support": "^0.5.13"
   },
   "peerDependencies": {
