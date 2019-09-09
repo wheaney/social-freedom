@@ -8,19 +8,22 @@ Here is what the Federal and User-owned infrastructure accounts would maintain. 
 
 ## Federal account
 The central account whose main duty is to orchestrate the sign-in and then delegate to the user's own AWS account. A secondary function of this account is providing search to allow accounts to find one another, but this is opt-in.
+* VPC
 * ElasticSearch index to find accounts by email, phone, name, etc…
   * Accounts may opt-in to this via preferences
 * Static website assets in S3/CloudFront
+* Route53 public DNS entries for the website
 * Cognito identities for sign-in
   * Cognito Hosted UI can be used for sign-in/up
 * DynamoDB "identity to account" table containing mapping of cognito identity (arn) to account id that owns their infrastructure
 * Lambdas
-  * Account creation, new account ID provided
+  * Account registration, new account ID provided
     * Deploy CloudFormation template to account
     * Add identity to account id mapping in DynamoDB
     * Subscribe to SNS topic for profile updates
-  * Account deletion
-    * Reverse of account creation
+    * Grab initial profile data, if present
+  * Account deregistration
+    * Reverse of account registration
   * Account profile updated, SNS topic subscription
     * Update account search index
   * Account preferences updated
