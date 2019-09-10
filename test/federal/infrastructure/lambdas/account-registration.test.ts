@@ -4,7 +4,6 @@ import {PutItemInput} from "aws-sdk/clients/dynamodb";
 import {handler} from "../../../../src/federal/infrastructure/lambdas/account-registration/index"
 
 beforeAll(async (done) => {
-    //get requires env vars
     done();
 });
 

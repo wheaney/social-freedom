@@ -2,14 +2,20 @@ import 'source-map-support/register';
 import * as cdk from "@aws-cdk/core";
 import {Code, Runtime, Function as LambdaFunction} from "@aws-cdk/aws-lambda";
 import {Table, AttributeType} from "@aws-cdk/aws-dynamodb"
-import {PolicyStatement} from "@aws-cdk/aws-iam"
+import {PolicyStatement, ServicePrincipal, Role} from "@aws-cdk/aws-iam"
 import * as fs from "fs";
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'FederalStack');
+const isDevelopment:boolean = process.env.NODE_ENV !== 'production';
 
-const OtherInfrastructure = (stage:string):any => {
-    const isDevelopment:boolean = stage === "dev"
+// one Role for all Lambdas to assume
+const ExecutionerRole = new Role(stack, "Executioner", {
+    assumedBy: new ServicePrincipal("lambda.amazonaws.com")
+})
+
+// TODO - ElasticSearch is supported by the CDK now
+const OtherInfrastructure = ():any => {
     const ElasticSearchInstanceType:string = isDevelopment ? "t2.micro.elasticsearch" : "m3.medium.elasticsearch"
     const ElasticSearchDevProperties:any = isDevelopment && {
         "EBSOptions": {
@@ -40,14 +46,15 @@ const OtherInfrastructure = (stage:string):any => {
 }
 
 new cdk.CfnInclude(stack, "OtherInfrastructure", {
-    template: OtherInfrastructure("dev")
+    template: OtherInfrastructure()
 });
 
 // Lambda references assume that tsc has compiled all *.ts files to the dist directory
-const AccountRegistrationLambda = new LambdaFunction(stack, 'AccountRegistrationHandler', {
+new LambdaFunction(stack, 'AccountRegistrationHandler', {
     runtime: Runtime.NODEJS_8_10,
     code: Code.fromInline(fs.readFileSync('./dist/src/federal/infrastructure/lambdas/account-registration/index.js').toString()),
-    handler: 'index.handler'
+    handler: 'index.handler',
+    role: ExecutionerRole
 });
 
 const IdentityToAccountTable = new Table(stack, "IdentityToAccount", {
@@ -58,13 +65,9 @@ const IdentityToAccountTable = new Table(stack, "IdentityToAccount", {
     tableName: "IdentityToAccount"
 })
 
-if (AccountRegistrationLambda.role) {
-    AccountRegistrationLambda.role.addToPolicy(new PolicyStatement({
-        resources: [IdentityToAccountTable.tableArn],
-        actions: ['dynamodb:putItem']
-    }));
-} else {
-    throw new Error("AccountRegistrationLambda role is undefined")
-}
+ExecutionerRole.addToPolicy(new PolicyStatement({
+    resources: [IdentityToAccountTable.tableArn],
+    actions: ['dynamodb:putItem']
+}));
 
 app.synth()
