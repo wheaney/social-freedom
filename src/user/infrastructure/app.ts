@@ -5,13 +5,15 @@ import {AttributeType, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
 import {CfnOutput} from "@aws-cdk/core";
-
+import {Topic} from "@aws-cdk/aws-sns";
+import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
+import * as fs from "fs";
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'UserStack');
 
 // one Role for all Lambdas to assume
-new Role(stack, "Executioner", {
+const ExecutionerRole = new Role(stack, "Executioner", {
     assumedBy: new ServicePrincipal("lambda.amazonaws.com")
 });
 
@@ -23,14 +25,14 @@ new Table(stack, "AccountDetails", {
     tableName: "AccountDetails"
 })
 
-const BuildSortTable = (tableName:string, primaryKey:string, sortKey:string):Table => {
+const BuildSortTable = (tableName:string, primaryKey:string):Table => {
     const table = new Table(stack, tableName, {
         partitionKey: {
             name: primaryKey,
             type: AttributeType.STRING
         },
         sortKey: {
-            name: sortKey,
+            name: "id",
             type: AttributeType.STRING
         },
         tableName: tableName
@@ -38,7 +40,7 @@ const BuildSortTable = (tableName:string, primaryKey:string, sortKey:string):Tab
     table.addLocalSecondaryIndex({
         indexName: `${tableName}ByTimestamp`,
         sortKey: {
-            name: "timestamp",
+            name: "timeSortKey",
             type: AttributeType.STRING
         },
         projectionType: ProjectionType.ALL
@@ -46,9 +48,13 @@ const BuildSortTable = (tableName:string, primaryKey:string, sortKey:string):Tab
 
     return table
 }
-BuildSortTable("Feed", "key", "entryId")
-BuildSortTable("Posts", "key", "postId")
-BuildSortTable("PostActivities", "postId", "activityId")
+BuildSortTable("Feed", "key")
+const PostsTable = BuildSortTable("Posts", "key")
+BuildSortTable("PostActivities", "postId")
+
+const PostsTopic = new Topic(stack, "PostsTopic", {
+    topicName: "Posts"
+})
 
 const MediaBucket = new Bucket(stack, "MediaBucket")
 
@@ -72,8 +78,26 @@ MediaBucket.addToResourcePolicy(new PolicyStatement({
     actions: ["s3:GetBucket*", "s3:GetObject*", "s3:List*"]
 }))
 
+// Lambda references assume that tsc has compiled all *.ts files to the dist directory
+new LambdaFunction(stack, 'PostCreationHandler', {
+    runtime: Runtime.NODEJS_8_10,
+    code: Code.fromInline(fs.readFileSync('./dist/src/user/infrastructure/lambdas/post-create/index.js').toString()),
+    handler: 'index.handler',
+    role: ExecutionerRole
+});
+
+ExecutionerRole.addToPolicy(new PolicyStatement({
+    resources: [PostsTable.tableArn],
+    actions: ['dynamodb:putItem']
+}));
+
+ExecutionerRole.addToPolicy(new PolicyStatement({
+    resources: [PostsTopic.topicArn],
+    actions: ['sns:Publish']
+}));
+
 new CfnOutput(stack, "mediaBucketArn", {
     value: MediaBucket.bucketArn
-})
+});
 
 app.synth();
