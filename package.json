@@ -24,6 +24,13 @@
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "devDependencies": {
+    "@aws-cdk/aws-cloudfront": "^1.7.0",
+    "@aws-cdk/aws-dynamodb": "^1.7.0",
+    "@aws-cdk/aws-lambda": "^1.7.0",
+    "@aws-cdk/aws-s3": "^1.7.0",
+    "@aws-cdk/core": "^1.7.0",
+    "@aws-cdk/cx-api": "^1.7.0",
+    "@aws-cdk/region-info": "^1.7.0",
     "@types/aws-lambda": "^8.10.31",
     "@types/jest": "^24.0.18",
     "@types/node": "^8.10.53",
@@ -35,11 +42,6 @@
     "typescript": "^3.6.2"
   },
   "dependencies": {
-    "@aws-cdk/aws-dynamodb": "^1.7.0",
-    "@aws-cdk/aws-lambda": "^1.7.0",
-    "@aws-cdk/core": "^1.7.0",
-    "@aws-cdk/cx-api": "^1.7.0",
-    "@aws-cdk/region-info": "^1.7.0",
     "aws-sdk": "^2.525.0",
     "source-map-support": "^0.5.13"
   },

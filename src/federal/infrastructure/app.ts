@@ -12,7 +12,7 @@ const isDevelopment:boolean = process.env.NODE_ENV !== 'production';
 // one Role for all Lambdas to assume
 const ExecutionerRole = new Role(stack, "Executioner", {
     assumedBy: new ServicePrincipal("lambda.amazonaws.com")
-})
+});
 
 // TODO - ElasticSearch is supported by the CDK now
 const OtherInfrastructure = ():any => {
@@ -63,7 +63,7 @@ const IdentityToAccountTable = new Table(stack, "IdentityToAccount", {
         type: AttributeType.STRING
     },
     tableName: "IdentityToAccount"
-})
+});
 
 ExecutionerRole.addToPolicy(new PolicyStatement({
     resources: [IdentityToAccountTable.tableArn],

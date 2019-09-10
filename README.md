@@ -16,18 +16,20 @@ The central account whose main duty is to orchestrate the sign-in and then deleg
 * Cognito identities for sign-in
   * Cognito Hosted UI can be used for sign-in/up
 * DynamoDB "identity to account" table containing mapping of cognito identity (arn) to account id that owns their infrastructure
+* SNS topics
+  * Profile updated
 * Lambdas
-  * Account registration, new account ID provided
+  * Account registration, Cognito identity, AWS region, and AWS account ID provided
+    * Verify identity, region, and account ID
     * Deploy CloudFormation template to account
+      * Will need to fail back to the UX with instructions on adding an IAM policy if this fails
     * Add identity to account id mapping in DynamoDB
-    * Subscribe to SNS topic for profile updates
     * Grab initial profile data, if present
+    * Invoked directly from UX synchronously, no SNS topic needed
   * Account deregistration
     * Reverse of account registration
   * Account profile updated, SNS topic subscription
     * Update account search index
-  * Account preferences updated
-    * Update profile updated SNS topic subscription above, based on account prefs
 
 ## User accounts, 1 AWS account per user
 User owns their AWS account, which includes all their posts and uploads, and they are responsible for providing their own payment information. Account usage should be designed to take advantage of AWS Free Tier to the extent possible, ideally costing users less than $1 per month.
@@ -36,44 +38,51 @@ Some costs to a user may be the result of someone else's actions, such as when a
 
 * DynamoDB table containing news feed entries
   * Entries are essentially updates from all subscription topics
-  * We'd want to use a sort key here that's auto-incrementing, this would allow us to use the Query
-  action to grab the last X entries in descending order to build the news feed
-  * Since we'd be relying on a sort key here to make the Query operation feasible, the primary key would
-  probably need to be a hardcoded value. Since all news feed entries would share this hardcoded primary
-  key, there's no reason we couldn't share this Dynamo table with others that have this same usage pattern
-  (like posts and post comments).
-    * One possible reason to have this in its own table is ease of access control, since the policy 
-    on these entries would never allow access outside this account
+  * We'd want to use a sort key and secondary index here, this would allow us to use the Query action to grab the last X entries in descending order to build the news feed
+  * The primary key would probably need to be a hardcoded value.
 * S3 object containing friends/follows
   * Simple list of account IDs
 * S3 bucket(s) for images/video
   * CloudFront (optional for images? Required for video)
   * Auto-publishes to SNS topics for object creation events
   * Could be one bucket with “directories” for images/video, could also combine with profile/preferences data (also different directories)
-* S3 bucket for profile/preferences data
-  * Profile auto-publishes to SNS topic (optional, depends on account prefs)
-  * Could use DynamoDB for this but S3 will do the auto-publish to SNS
-  * Might just use one bucket for this and the images/video, organized by directories within the bucket
+* DynamoDB table for profile/preferences data
+  * Preferences:
+    * Opt-in to search index
+    * Which fields to index (if opted-in to the above): name, phone, email, etc...
+    * Auto-accept follow requests (public profile, Twitter-style)
+    * Allow other accounts to post to my account
+      * Text-only, allow images/video
+      * Depending on how/whether we want to allow "tagging" of content, that may replace this functionality. This preference
+      would become "Allow other accounts to tag me in their posts"
 * DynamoDB table of posts
   * Stores metadata for all text and media posts
-  * All posts can contain tags of other users, tags for categorization (including albums for media), and location data
-  * An entry may get created from another users’ post (user tags), so “origin account id” is an optional field
-  * Links to S3 files, for media
+  * Links to S3/CloudFront, for media
     * This should only ever link to media within this account, if we copy the media from tagged posts
-  * Same storage strategy as news feed entries: hardcoded primary key and usage of an auto-incrementing 
+  * Same storage strategy as news feed entries: hardcoded primary key and usage secondary index
   sort key to allow for Query to grab the X most recent
+  * Tagging (later feature):
+    * All posts can contain tags of other users, tags for categorization (including albums for media), and location data
+    * An entry may get created from another users’ post (user tags), so “origin account id” is an optional field
 * DynamoDB table of activities on a post
   * Stores metadata regarding all reactions/comments to a post
-  * Same storage strategy as news feed entries: hardcoded primary key and usage of an auto-incrementing 
+  * Same storage strategy as news feed entries: hardcoded primary key and usage secondary index 
   sort key to allow for Query to grab the X most recent
 * IAM roles for different permission levels
 * IAM groups for friends and other allowed follows
   * Accepting a friend/follow request adds the identity to this group
   * Could allow for creation of multiple groups, would work similar to Google Plus’ circles
+* SNS Topics
+  * Post created/modified/deleted
+  * Post activity created/modified/deleted
+  * Follow request received
+  * Follow acceptance received
+  * Follow rejection/removal received
+  * Profile modified
 * Lambdas
   * Requesting a follow
-    * Add the account ARN to an IAM Group for follows, would need to provide access to the "Follow accepted" 
-    Lambda or SNS topic
+    * Add the account ARN to an IAM Group for follows, would need to provide access to the "Follow accepted"
+    SNS topic
     * Directly trigger a Lambda or publish to known SNS topic in the account you want to follow
       * Would require that this Lambda ARN is deterministic, should be achievable if we know the account
       ARN and the Lambda function name never changes
@@ -91,13 +100,13 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Accepting a follow request
     * Adds Cognito identity to appropriate IAM group, granting subscribe permissions to SNS topics
     and read permissions to posts and comments
-    * Directly trigger Lambda or publish to known SNS topic in the requesting account
+    * Publish to SNS topic in the requesting account
   * Denying a follow request
-    * Directly trigger Lambda or publish to known SNS topic in the requesting account
+    * Publish to SNS topic in the requesting account
   * Follow accepted, SNS topic subscription
     * Create subscription for news feed updates (optional, depends on account prefs)
     * Notify account owner (depending on account settings)
-    * Persist relationship to friends table
+    * Persist relationship and cache profile data to follows table
   * Removing a follow
     * Removes identity from requested group
     * Notifies following account of remove (SNS publish)
@@ -105,12 +114,7 @@ Some costs to a user may be the result of someone else's actions, such as when a
     * Drop subscription
     * Remove relationship entry from friends table
   * Following account update, SNS topic subscription(s)
-    * Append change data to news feed table
-    * Notify account owner (depending on preferences)
-    * Update index of follows with new profile data
-    * If post contains user tags referencing this account
-      * Creates/updates/deletes a “post” DynamoDB entry within this account, referencing tagged content, flagged as unpublished (nobody else can view)
-      * Notify user account, store only a reference to the tagged content in the "posts" table
+    * Update cached profile data for follows
   * Tagged content rejected
     * Remove unpublished content
   * Tagged content accepted
@@ -124,7 +128,12 @@ Some costs to a user may be the result of someone else's actions, such as when a
       * Only do this if unpublished flag isn't set, or it's being removed
   * Create/update/delete post activities (listens to DynamoDB post activities table changes)
     * Publishes to appropriate SNS topics (possibly same topics as for posts)
-  * Clearing/archiving news feed entries based on account preferences
+  * Modify profile
+    * Writes to profile Dynamo table
+    * Publishes updated profile to Federal SNS topic, if set in preferences
+  * Modify preferences
+    * May publish to Federal stack's profile-changed SNS topic to remove or add profile data, 
+    if this setting is changed
   * Probably something to monitor account costs and notify user account if certain thresholds are hit?
     
 # Deployments
@@ -166,3 +175,5 @@ couple possible solutions:
   (snapshotting in this case implies that the blacklist won't stay updated if more accounts are blocked).
 * Any downside to directly triggering Lambda's across accounts? Is this less failure-proof than an publishing
 to an SNS topic or SQS queue in that account?
+* Can a "requester pays" bucket be used for images/video so that only the people consuming the media 
+get charged? This may not be possible with our use of CloudFront.
