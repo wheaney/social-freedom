@@ -22,12 +22,10 @@ describe("the AccountRegistration handler", () => {
             callback(null, {});
         })
 
-        expect(await handler({
+        await handler({
             identity: "identity",
             account: "account"
-        })).toStrictEqual({
-            statusCode: 200
-        });
+        })
 
         AWSMock.restore('DynamoDB');
     });
