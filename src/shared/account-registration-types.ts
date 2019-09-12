@@ -1,4 +1,5 @@
 export type AccountRegistrationEvent = {
     identity: string,
-    account: string
+    accountId: string,
+    region: string
 }

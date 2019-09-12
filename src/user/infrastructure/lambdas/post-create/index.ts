@@ -13,7 +13,7 @@ export const handler = async (event:PostCreateEvent, context: Context) => {
     const timestamp:number = new Date(Date.now()).getTime()
     const id = uuid.v1()
     await new AWS.DynamoDB().putItem({
-        TableName: "Posts",
+        TableName: `Posts-${event.userId}`,
         Item: {
             "key": {S: TableKey},
             "id": {S: id},
@@ -27,11 +27,14 @@ export const handler = async (event:PostCreateEvent, context: Context) => {
 
     // Publish to the posts SNS topic
     await new AWS.SNS().publish({
-        TopicArn: `arn:aws:sns:${awsRegion}:${awsAccountId}:Posts`,
+        TopicArn: `arn:aws:sns:${awsRegion}:${awsAccountId}:Posts-${event.userId}`,
         Message: JSON.stringify({
             default: `create ${event.type} ${event.body} ${event.mediaUrl}`,
             eventType: "create",
-            ...event
+            id: id,
+            type: event.type,
+            body: event.body,
+            mediaUrl: event.mediaUrl
         }),
         MessageStructure: "json"
     }).promise()

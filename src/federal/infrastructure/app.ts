@@ -4,10 +4,16 @@ import {Code, Runtime, Function as LambdaFunction} from "@aws-cdk/aws-lambda";
 import {Table, AttributeType} from "@aws-cdk/aws-dynamodb"
 import {PolicyStatement, ServicePrincipal, Role} from "@aws-cdk/aws-iam"
 import * as fs from "fs";
+import {CfnParameter} from "@aws-cdk/core";
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'FederalStack');
-const isDevelopment:boolean = process.env.NODE_ENV !== 'production';
+
+// Parameters
+const environmentParam = new CfnParameter(stack, 'Environment', {
+    default: 'development'
+})
+const isDevelopment:boolean = environmentParam.valueAsString !== 'production';
 
 // one Role for all Lambdas to assume
 const ExecutionerRole = new Role(stack, "Executioner", {

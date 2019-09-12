@@ -7,7 +7,7 @@ import {PostType} from "../../../../src/shared/post-types";
 import {Context} from "aws-lambda";
 
 const ExpectedPutItemParams = {
-    TableName: 'Posts',
+    TableName: 'Posts-someUserId',
     Item: {
         "key": {S: "Posts"},
         "id": {S: "someUUID"},
@@ -20,10 +20,11 @@ const ExpectedPutItemParams = {
 }
 
 const ExpectedPublishParams = {
-    TopicArn: "arn:aws:sns:us-west-1:12345:Posts",
+    TopicArn: "arn:aws:sns:us-west-1:12345:Posts-someUserId",
     Message: JSON.stringify({
         default: "create Text postBody postMediaUrl",
         eventType: "create",
+        id: "someUUID",
         type: "Text",
         body: "postBody",
         mediaUrl: "postMediaUrl"
@@ -33,6 +34,7 @@ const ExpectedPublishParams = {
 
 async function invokeHandler() {
     await handler({
+        userId: "someUserId",
         type: PostType.Text,
         body: "postBody",
         mediaUrl: "postMediaUrl"

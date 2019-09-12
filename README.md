@@ -21,10 +21,9 @@ The central account whose main duty is to orchestrate the sign-in and then deleg
 * Lambdas
   * Account registration, Cognito identity, AWS region, and AWS account ID provided
     * Verify identity, region, and account ID
-    * Deploy CloudFormation template to account
-      * Will need to fail back to the UX with instructions on adding an IAM policy if this fails
     * Add identity to account id mapping in DynamoDB
-    * Grab initial profile data, if present
+    * Deploy User CodePipeline CloudFormation template to account
+      * Will need to fail back to the UX with instructions on adding an IAM policy if this fails
     * Invoked directly from UX synchronously, no SNS topic needed
   * Account deregistration
     * Reverse of account registration
@@ -135,11 +134,22 @@ Some costs to a user may be the result of someone else's actions, such as when a
     * May publish to Federal stack's profile-changed SNS topic to remove or add profile data, 
     if this setting is changed
   * Probably something to monitor account costs and notify user account if certain thresholds are hit?
-    
+
 # Deployments
-There needs to be a way for code changes to the infrastructure (federal or user) to get propagated out to all AWS accounts. 
-This can probably be done by creating a Code pipeline within AWS accounts, CodeBuild can be hooked into the GitHub repo
-and run the relevant CDK command, etc...
+Deployments to the Federal and User stacks would be achievable through CodePipeline stacks. This means we'll actually
+have two more CloudFormation (CDK) stacks to create that will do the one-time setup of the Federal and User CodePipeline
+stacks. The User CodePipeline stack would be what the Federal stack actually deploys to a new account on registration.
+
+The stack would simply build a CodePipeline pipeline. We could probably use the following actions:
+* [Githib Source polling](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-codepipeline-actions.GitHubSourceAction.html)
+* Presumably we'd need to use the [Code build action](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-codepipeline-actions.CodeBuildAction.html) to build the relevant CloudFormation template (federal or user stack)
+* [CloudFormation Create/Update stack](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-codepipeline-actions.CloudFormationCreateUpdateStackAction.html)
+* [Lambda invoke action](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-codepipeline-actions.LambdaInvokeActionProps.html)
+to write relevant CloudFormation outputs to AccountDetails table (or some other persistence that other user accounts would have access to)
+
+I also found this: the [apo-delivery](https://github.com/aws/aws-cdk/tree/master/packages/@aws-cdk/app-delivery) CDK 
+library seems built just for this usage, and the example on that page can be used as a base for what
+we need to do here.
 
 # Testing and deploying CDK changes in dev
 1. Make sure you've configured your AWS CLI (you should have files present in ~/.aws) to use your own

@@ -1,8 +1,9 @@
 import * as AWS from "aws-sdk"
 import {AccountRegistrationEvent} from "../../../../shared/account-registration-types";
+import * as uuid from "uuid";
 
 export const handler = async (event:AccountRegistrationEvent) => {
-    // Deploy CloudFormation template to account
+    // Verify identity, region, and account ID
     // TODO
 
     // Add identity to account id mapping in DynamoDB
@@ -10,13 +11,12 @@ export const handler = async (event:AccountRegistrationEvent) => {
         TableName: "IdentityToAccount",
         Item: {
             "identity": {S: event.identity},
-            "account": {S: event.account}
+            "accountId": {S: event.accountId},
+            "region": {S: event.region},
+            "userId": {S: uuid.v1()}
         }
     }).promise()
 
-    // Subscribe to SNS topic for profile updates
-    // TODO
-
-    // Grab initial profile data, if present
+    // Deploy CloudFormation template to account
     // TODO
 };

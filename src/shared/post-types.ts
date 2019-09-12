@@ -5,6 +5,7 @@ export enum PostType {
 }
 
 export type PostCreateEvent = {
+    userId: string,
     type: PostType,
     body: string,
     mediaUrl?: string

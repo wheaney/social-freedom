@@ -3,6 +3,12 @@ import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
 import {handler} from "../../../../src/federal/infrastructure/lambdas/account-registration/index"
 
+jest.mock('uuid', () => ({
+    v1: () => {
+        return "someUUID"
+    }
+}))
+
 beforeAll(async (done) => {
     done();
 });
@@ -15,7 +21,9 @@ describe("the AccountRegistration handler", () => {
                 TableName: 'IdentityToAccount',
                 Item: {
                     "identity": {S: "identity"},
-                    "account": {S: "account"}
+                    "accountId": {S: "accountId"},
+                    "region": {S: "region"},
+                    "userId": {S: "someUUID"}
                 }
             })
 
@@ -24,7 +32,8 @@ describe("the AccountRegistration handler", () => {
 
         await handler({
             identity: "identity",
-            account: "account"
+            accountId: "accountId",
+            region: "region"
         })
 
         AWSMock.restore('DynamoDB');
@@ -37,7 +46,9 @@ describe("the AccountRegistration handler", () => {
                 TableName: 'IdentityToAccount',
                 Item: {
                     "identity": {S: "identity"},
-                    "account": {S: "account"}
+                    "accountId": {S: "accountId"},
+                    "region": {S: "region"},
+                    "userId": {S: "someUUID"}
                 }
             })
 
@@ -47,7 +58,8 @@ describe("the AccountRegistration handler", () => {
         try {
             await handler({
                 identity: "identity",
-                account: "account"
+                accountId: "accountId",
+                region: "region"
             })
         } catch (e) {
             expect(e).toEqual("failed!")
