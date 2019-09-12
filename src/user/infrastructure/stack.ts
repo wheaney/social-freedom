@@ -111,7 +111,11 @@ export class UserStack extends cdk.Stack {
             code: Code.fromInline(fs.readFileSync(`./dist/src/user/infrastructure/lambdas/${directoryName}/index.js`).toString()),
             handler: 'index.handler',
             role: this.executionerRole,
-            environment: {}
+            environment: {
+                USER_ID: this.userId,
+                ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
+                REGION: cdk.Aws.REGION
+            }
         });
     }
 }

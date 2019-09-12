@@ -1,19 +1,18 @@
 import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
 import {PostCreateEvent} from "../../../../shared/post-types";
-import {Context} from "aws-lambda";
 
 const TableKey = "Posts"
-export const handler = async (event:PostCreateEvent, context: Context) => {
-    const arnParts:string[] = context.invokedFunctionArn.split(':')
-    const awsAccountId = arnParts[4]
-    const awsRegion = arnParts[3]
+export const handler = async (event:PostCreateEvent) => {
+    const awsAccountId = process.env.ACCOUNT_ID
+    const awsRegion = process.env.REGION
+    const userId = process.env.USER_ID
 
     // Add post to DynamoDB "posts" table
     const timestamp:number = new Date(Date.now()).getTime()
     const id = uuid.v1()
     await new AWS.DynamoDB().putItem({
-        TableName: `Posts-${event.userId}`,
+        TableName: `Posts-${userId}`,
         Item: {
             "key": {S: TableKey},
             "id": {S: id},
@@ -27,7 +26,7 @@ export const handler = async (event:PostCreateEvent, context: Context) => {
 
     // Publish to the posts SNS topic
     await new AWS.SNS().publish({
-        TopicArn: `arn:aws:sns:${awsRegion}:${awsAccountId}:Posts-${event.userId}`,
+        TopicArn: `arn:aws:sns:${awsRegion}:${awsAccountId}:Posts-${userId}`,
         Message: JSON.stringify({
             default: `create ${event.type} ${event.body} ${event.mediaUrl}`,
             eventType: "create",

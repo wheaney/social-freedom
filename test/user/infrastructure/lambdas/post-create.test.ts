@@ -4,7 +4,6 @@ import {PutItemInput} from "aws-sdk/clients/dynamodb";
 import {handler} from "../../../../src/user/infrastructure/lambdas/post-create/index"
 import {PublishInput} from "aws-sdk/clients/sns";
 import {PostType} from "../../../../src/shared/post-types";
-import {Context} from "aws-lambda";
 
 const ExpectedPutItemParams = {
     TableName: 'Posts-someUserId',
@@ -34,13 +33,10 @@ const ExpectedPublishParams = {
 
 async function invokeHandler() {
     await handler({
-        userId: "someUserId",
         type: PostType.Text,
         body: "postBody",
         mediaUrl: "postMediaUrl"
-    }, {
-        invokedFunctionArn: "arn:aws:lambda:us-west-1:12345:function:UserStack-PostCreationHandler"
-    } as Context)
+    })
 }
 
 jest.mock('uuid', () => ({
@@ -52,6 +48,11 @@ jest.mock('uuid', () => ({
 jest.spyOn(global.Date, 'now').mockImplementation(() => 1234567890)
 
 beforeAll(async (done) => {
+    process.env = {
+        USER_ID: "someUserId",
+        REGION: "us-west-1",
+        ACCOUNT_ID: "12345"
+    }
     done();
 });
 
