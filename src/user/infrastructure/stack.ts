@@ -21,7 +21,7 @@ export class UserStack extends cdk.Stack {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com")
         });
 
-        new Table(this, `AccountDetails-${userId}`, {
+        const AccountDetailsTable = new Table(this, `AccountDetails-${userId}`, {
             partitionKey: {
                 name: "key",
                 type: AttributeType.STRING
@@ -60,10 +60,15 @@ export class UserStack extends cdk.Stack {
         }))
 
         this.buildLambda("PostCreate", "post-create")
+        this.buildLambda("FollowRequestReceived", "follow-request-received")
 
         this.executionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTable.tableArn],
             actions: ['dynamodb:putItem']
+        }));
+        this.executionerRole.addToPolicy(new PolicyStatement({
+            resources: [AccountDetailsTable.tableArn],
+            actions: ['dynamodb:getItem', 'dynamodb:updateItem']
         }));
         this.executionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTopic.topicArn],
