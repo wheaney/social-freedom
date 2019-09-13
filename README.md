@@ -49,6 +49,8 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Preferences:
     * Opt-in to search index
     * Which fields to index (if opted-in to the above): name, phone, email, etc...
+    * Which fields other people can see
+      * Should probably warn about fields like phone number and email if this profile is public
     * Auto-accept follow requests (public profile, Twitter-style)
     * Allow other accounts to post to my account
       * Text-only, allow images/video
@@ -80,14 +82,11 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Profile modified
 * Lambdas
   * Requesting a follow
-    * Add the account ARN to an IAM Group for follows, would need to provide access to the "Follow accepted"
-    SNS topic
-    * Directly trigger a Lambda or publish to known SNS topic in the account you want to follow
+    * Add the account ARN to an IAM Group for follows, would need to provide access to the "Follow accepted/denied"
+    Lambda
+    * Directly trigger a Lambda the account you want to follow
       * Would require that this Lambda ARN is deterministic, should be achievable if we know the account
       ARN and the Lambda function name never changes
-      * One of the parameters here might be the ARN to the Lambda that the other account should
-      eventually call if the response is PENDING
-        * Not entirely necessary if the Lambda ARN is deterministic as described above
   * Receiving a follow request
     * One of 3 return values: DENIED, PENDING, and ACCEPTED
       * DENIED if the requesting account is already blocked or this user account otherwise is set to
@@ -99,9 +98,9 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Accepting a follow request
     * Adds Cognito identity to appropriate IAM group, granting subscribe permissions to SNS topics
     and read permissions to posts and comments
-    * Publish to SNS topic in the requesting account
+    * Call a lambda in the requesting account
   * Denying a follow request
-    * Publish to SNS topic in the requesting account
+    * Call a lambda in the requesting account
   * Follow accepted, SNS topic subscription
     * Create subscription for news feed updates (optional, depends on account prefs)
     * Notify account owner (depending on account settings)

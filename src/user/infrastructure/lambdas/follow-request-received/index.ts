@@ -40,7 +40,9 @@ export const handler = async (event:FollowDetails) => {
                         M: {
                             accountId: {S: event.accountId},
                             region: {S: event.region},
-                            userId: {S: event.userId}
+                            userId: {S: event.userId},
+                            iamUserArn: {S: event.iamUserArn},
+                            profile: {S: JSON.stringify(event.profile)}
                         }
                     }]
                 }

@@ -26,7 +26,9 @@ const ExpectedUpdateItemParams = {
                 M: {
                     accountId: {S: "followingAccountId"},
                     region: {S: "followingRegion"},
-                    userId: {S: "followingUserId"}
+                    userId: {S: "followingUserId"},
+                    iamUserArn: {S: "followingUserARN"},
+                    profile: {S: "{\"name\":\"Wayne Heaney\",\"photoUrl\":\"somePhotoUrl\"}"}
                 }
             }]
         }
@@ -37,7 +39,12 @@ async function invokeHandler() {
     await handler({
         accountId: "followingAccountId",
         region: "followingRegion",
-        userId: "followingUserId"
+        userId: "followingUserId",
+        iamUserArn: "followingUserARN",
+        profile: {
+            name: "Wayne Heaney",
+            photoUrl: "somePhotoUrl"
+        }
     })
 }
 
