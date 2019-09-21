@@ -5,7 +5,6 @@ import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
 import {Topic} from "@aws-cdk/aws-sns";
 import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
-import * as fs from "fs";
 import {
     AuthorizationType,
     CfnAuthorizer,
@@ -19,6 +18,8 @@ import {Vpc} from "@aws-cdk/aws-ec2";
 import {HostedZone} from "@aws-cdk/aws-route53";
 import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
 import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
+// import * as fs from "fs";
+// import * as archiver from "archiver";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
@@ -29,6 +30,14 @@ export class UserStack extends cdk.Stack {
 
     constructor(app: cdk.App, userId: string, userPoolArn: string) {
         super(app, `UserStack-${userId}`);
+
+        // const LambdasZipPath = './dist/userLambdas.zip'
+        // const LambdasZipFile = fs.createWriteStream(LambdasZipPath)
+        // const Archive = archiver('zip')
+        // Archive.pipe(LambdasZipFile)
+        // Archive.directory('./dist/src/user/infrastructure/lambdas', false)
+        // Archive.finalize()
+
         this.userId = userId;
 
         this.vpc = new Vpc(this,  'VPC', {
@@ -95,8 +104,10 @@ export class UserStack extends cdk.Stack {
             CDN_DOMAIN_NAME: WebDistribution.domainName
         }
 
-        this.constructLambda("PostCreate", "direct-access/post-create")
-        this.constructLambda("IncomingFollowRequestCreate", "follower-api/incoming-follow-request-create")
+        const DirectAccessLambdas = Code.fromAsset('./dist/src/user/infrastructure/lambdas/direct-access')
+        const FollowerApiLambdas = Code.fromAsset('./dist/src/user/infrastructure/lambdas/follower-api')
+        this.constructLambda("PostCreate", DirectAccessLambdas, "direct-access/post-create.handler")
+        this.constructLambda("IncomingFollowRequestCreate", FollowerApiLambdas, "incoming-follow-request-create.handler")
 
         const Api = new RestApi(this, "FollowerAPI", {
             endpointTypes: [EndpointType.EDGE]
@@ -108,10 +119,10 @@ export class UserStack extends cdk.Stack {
             restApiId: Api.restApiId,
             providerArns: [userPoolArn]
         })
-        const PostsApi = this.constructLambdaApi(Api.root, 'posts', 'GET', "PostsGet", "follower-api/posts-get")
-        const PostApi = this.constructLambdaApi(PostsApi, '{postId}', 'GET', "PostGet", "follower-api/post-get")
-        const PostActivitiesApi = this.constructLambdaApi(PostApi, 'activities', 'GET', "PostActivitiesGet", "follower-api/post-activities-get")
-        this.constructLambdaApi(PostActivitiesApi, '{postActivityId}', 'GET', "PostActivityGet", "follower-api/post-activity-get")
+        const PostsApi = this.constructLambdaApi(Api.root, 'posts', 'GET', "PostsGet", FollowerApiLambdas, "posts-get.handler")
+        const PostApi = this.constructLambdaApi(PostsApi, '{postId}', 'GET', "PostGet", FollowerApiLambdas, "post-get.handler")
+        const PostActivitiesApi = this.constructLambdaApi(PostApi, 'activities', 'GET', "PostActivitiesGet", FollowerApiLambdas, "post-activities-get.handler")
+        this.constructLambdaApi(PostActivitiesApi, '{postActivityId}', 'GET', "PostActivityGet", FollowerApiLambdas, "post-activity-get.handler")
 
         this.executionerRole.addManagedPolicy(
             ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
@@ -155,9 +166,9 @@ export class UserStack extends cdk.Stack {
     }
 
     constructLambdaApi(parentResource: IResource, path: string, method: "GET" | "PUT" | "POST" | "DELETE",
-                       functionName: string, directoryName: string):Resource {
+                       functionName: string, code: Code, handlerPath: string):Resource {
         const resource = parentResource.addResource(path)
-        resource.addMethod(method, new LambdaIntegration(this.constructLambda(functionName, directoryName)), {
+        resource.addMethod(method, new LambdaIntegration(this.constructLambda(functionName, code, handlerPath)), {
             authorizationType: AuthorizationType.COGNITO,
             authorizer: {authorizerId: this.cognitoAuthorizer.ref}
         })
@@ -165,13 +176,13 @@ export class UserStack extends cdk.Stack {
         return resource
     }
 
-    constructLambda(functionName: string, directoryName: string):LambdaFunction {
+    constructLambda(functionName: string, code: Code, handlerPath: string):LambdaFunction {
         // Lambda references assume that tsc has compiled all *.ts files to the dist directory
         return new LambdaFunction(this, functionName, {
             functionName: `${functionName}-${this.userId}`,
-            runtime: Runtime.NODEJS_8_10,
-            code: Code.fromInline(fs.readFileSync(`./dist/src/user/infrastructure/lambdas/${directoryName}/index.js`).toString()),
-            handler: 'index.handler',
+            runtime: Runtime.NODEJS_10_X,
+            code: code,
+            handler: handlerPath,
             role: this.executionerRole,
             environment: this.lambdaEnvironmentVariables,
             vpc: this.vpc
@@ -205,7 +216,7 @@ export class UserStack extends cdk.Stack {
             managementEvents: ReadWriteType.WRITE_ONLY
         })
 
-        const SnsSubscriptionValidationLambda = this.constructLambda('SNSSubscriptionValidation', 'sns/sns-subscription-validation')
+        const SnsSubscriptionValidationLambda = this.constructLambda('SNSSubscriptionValidation', Code.fromAsset('./dist/src/user/infrastructure/lambdas/sns'), 'sns-subscription-validation.handler')
         new Rule(this, 'SNSSubscriptionRule', {
             eventPattern: {
                 source: ['aws.sns'],

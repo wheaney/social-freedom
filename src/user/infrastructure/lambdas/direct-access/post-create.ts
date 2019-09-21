@@ -1,6 +1,6 @@
 import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
-import {PostCreateEvent} from "../../../../../shared/post-types";
+import {PostCreateEvent} from "../../../../shared/post-types";
 
 const TableKey = "Posts"
 export const handler = async (event:PostCreateEvent) => {

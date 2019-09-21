@@ -1,7 +1,7 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {GetItemInput, UpdateItemInput} from "aws-sdk/clients/dynamodb";
-import {handler} from "../../../../src/user/infrastructure/lambdas/follower-api/incoming-follow-request-create/index"
+import {handler} from "../../../../src/user/infrastructure/lambdas/follower-api/incoming-follow-request-create"
 
 jest.mock('uuid', () => ({
     v1: () => {

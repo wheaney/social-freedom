@@ -2,7 +2,7 @@ import * as AWS from "aws-sdk";
 import {GetItemOutput} from "aws-sdk/clients/dynamodb";
 import {PromiseResult} from "aws-sdk/lib/request";
 import {AWSError} from "aws-sdk";
-import {FollowDetails} from "../../../../../shared/follow-request-types";
+import {FollowDetails} from "../../../../shared/follow-request-types";
 import * as uuid from "uuid";
 
 const AccountDetailsTableKey = "AccountDetails"
