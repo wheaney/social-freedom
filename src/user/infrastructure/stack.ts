@@ -1,50 +1,73 @@
 import * as cdk from "@aws-cdk/core";
-import {Role, ServicePrincipal, CanonicalUserPrincipal, PolicyStatement} from "@aws-cdk/aws-iam";
+import {CanonicalUserPrincipal, ManagedPolicy, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam";
 import {AttributeType, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
-import {Bucket} from "@aws-cdk/aws-s3";
+import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
-import {CfnOutput} from "@aws-cdk/core";
 import {Topic} from "@aws-cdk/aws-sns";
 import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
 import * as fs from "fs";
+import {
+    AuthorizationType,
+    CfnAuthorizer,
+    EndpointType,
+    IResource,
+    LambdaIntegration,
+    Resource,
+    RestApi
+} from "@aws-cdk/aws-apigateway";
+import {Vpc} from "@aws-cdk/aws-ec2";
+import {HostedZone} from "@aws-cdk/aws-route53";
+import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
+import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
     readonly executionerRole: Role;
+    readonly cognitoAuthorizer: CfnAuthorizer;
+    readonly vpc: Vpc;
+    readonly lambdaEnvironmentVariables: any;
 
-    constructor(app: cdk.App, userId: string) {
+    constructor(app: cdk.App, userId: string, userPoolArn: string) {
         super(app, `UserStack-${userId}`);
         this.userId = userId;
 
+        this.vpc = new Vpc(this,  'VPC', {
+            enableDnsHostnames: true,
+            enableDnsSupport: true
+        })
+        const FollowerAPIHostedZone = new HostedZone(this, 'FollowerAPIHostedZone', {
+            vpcs: [this.vpc],
+            zoneName: `followerapi-${userId}`
+        })
+
         // one Role for all Lambdas to assume
-        this.executionerRole = new Role(this, `Executioner-${userId}`, {
+        this.executionerRole = new Role(this, "Executioner", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com")
         });
 
-        const AccountDetailsTable = new Table(this, `AccountDetails-${userId}`, {
+        const AccountDetailsTable = new Table(this, "AccountDetails", {
             partitionKey: {
                 name: "key",
                 type: AttributeType.STRING
-            },
-            tableName: `AccountDetails-${userId}`
+            }
         })
 
-        this.buildSortTable("Feed", "key")
+        const FeedTable = this.buildSortTable("Feed", "key")
         const PostsTable = this.buildSortTable("Posts", "key")
-        this.buildSortTable("PostActivities", "postId")
+        const PostActivitiesTable = this.buildSortTable("PostActivities", "postId")
 
-        const PostsTopic = new Topic(this, `PostsTopic-${userId}`, {
+        const PostsTopic = new Topic(this, "PostsTopic", {
             topicName: `Posts-${userId}`
         })
 
-        const MediaBucket = new Bucket(this, `MediaBucket-${userId}`)
+        const MediaBucket = new Bucket(this, "MediaBucket")
 
-        const OriginAccessIdentity = new CfnCloudFrontOriginAccessIdentity(this, `CloudFrontOriginAccessIdentity-${userId}`, {
+        const OriginAccessIdentity = new CfnCloudFrontOriginAccessIdentity(this, "CloudFrontOriginAccessIdentity", {
             cloudFrontOriginAccessIdentityConfig: {
                 comment: "CloudFront access for user media files"
             }
         })
-        const WebDistribution = new CloudFrontWebDistribution(this, `CloudFrontWebDistribution-${userId}`, {
+        const WebDistribution = new CloudFrontWebDistribution(this, "CloudFrontWebDistribution", {
             originConfigs: [{
                 s3OriginSource: {
                     s3BucketSource: MediaBucket,
@@ -59,33 +82,57 @@ export class UserStack extends cdk.Stack {
             actions: ["s3:GetBucket*", "s3:GetObject*", "s3:List*"]
         }))
 
-        this.buildLambda("PostCreate", "post-create")
-        this.buildLambda("FollowRequestReceived", "follow-request-received")
+        this.lambdaEnvironmentVariables = {
+            USER_ID: this.userId,
+            ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
+            REGION: cdk.Aws.REGION,
+            HOSTED_ZONE: FollowerAPIHostedZone.hostedZoneId,
+            ACCOUNT_DETAILS_TABLE: AccountDetailsTable.tableArn,
+            FEED_TABLE: FeedTable.tableArn,
+            POSTS_TABLE: PostsTable.tableArn,
+            POST_ACTIVITIES_TABLE: PostActivitiesTable.tableArn,
+            MEDIA_BUCKET: MediaBucket.bucketArn,
+            CDN_DOMAIN_NAME: WebDistribution.domainName
+        }
 
+        this.constructLambda("PostCreate", "direct-access/post-create")
+        this.constructLambda("IncomingFollowRequestCreate", "follower-api/incoming-follow-request-create")
+
+        const Api = new RestApi(this, "FollowerAPI", {
+            endpointTypes: [EndpointType.EDGE]
+        })
+        this.cognitoAuthorizer = new CfnAuthorizer(this, "CognitoAuthorizer", {
+            name: "CognitoAuthorizer",
+            type: AuthorizationType.COGNITO,
+            identitySource: "method.request.header.Authorization",
+            restApiId: Api.restApiId,
+            providerArns: [userPoolArn]
+        })
+        const PostsApi = this.constructLambdaApi(Api.root, 'posts', 'GET', "PostsGet", "follower-api/posts-get")
+        const PostApi = this.constructLambdaApi(PostsApi, '{postId}', 'GET', "PostGet", "follower-api/post-get")
+        const PostActivitiesApi = this.constructLambdaApi(PostApi, 'activities', 'GET', "PostActivitiesGet", "follower-api/post-activities-get")
+        this.constructLambdaApi(PostActivitiesApi, '{postActivityId}', 'GET', "PostActivityGet", "follower-api/post-activity-get")
+
+        this.executionerRole.addManagedPolicy(
+            ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaVPCAccessExecutionRole'))
         this.executionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTable.tableArn],
-            actions: ['dynamodb:putItem']
+            actions: ['dynamodb:PutItem']
         }));
         this.executionerRole.addToPolicy(new PolicyStatement({
             resources: [AccountDetailsTable.tableArn],
-            actions: ['dynamodb:getItem', 'dynamodb:updateItem']
+            actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem']
         }));
         this.executionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTopic.topicArn],
             actions: ['sns:Publish']
         }));
 
-        // some resources will have names generated by CloudFormation, output them so they can be retrieved and referenced later
-        new CfnOutput(this, `MediaBucketArn-${userId}`, {
-            value: MediaBucket.bucketArn
-        });
-        new CfnOutput(this, `CloudFormationDomainName-${userId}`, {
-            value: WebDistribution.domainName
-        })
+        this.constructSnsTopicSubscriptionValidation()
     }
 
     buildSortTable(tableName: string, primaryKey: string): Table {
-        const table = new Table(this, `${tableName}-${this.userId}`, {
+        const table = new Table(this, tableName, {
             partitionKey: {
                 name: primaryKey,
                 type: AttributeType.STRING
@@ -93,8 +140,7 @@ export class UserStack extends cdk.Stack {
             sortKey: {
                 name: "id",
                 type: AttributeType.STRING
-            },
-            tableName: `${tableName}-${this.userId}`
+            }
         });
         table.addLocalSecondaryIndex({
             indexName: `${tableName}ByTimestamp`,
@@ -108,7 +154,18 @@ export class UserStack extends cdk.Stack {
         return table
     }
 
-    buildLambda(functionName: string, directoryName: string):LambdaFunction {
+    constructLambdaApi(parentResource: IResource, path: string, method: "GET" | "PUT" | "POST" | "DELETE",
+                       functionName: string, directoryName: string):Resource {
+        const resource = parentResource.addResource(path)
+        resource.addMethod(method, new LambdaIntegration(this.constructLambda(functionName, directoryName)), {
+            authorizationType: AuthorizationType.COGNITO,
+            authorizer: {authorizerId: this.cognitoAuthorizer.ref}
+        })
+
+        return resource
+    }
+
+    constructLambda(functionName: string, directoryName: string):LambdaFunction {
         // Lambda references assume that tsc has compiled all *.ts files to the dist directory
         return new LambdaFunction(this, functionName, {
             functionName: `${functionName}-${this.userId}`,
@@ -116,11 +173,65 @@ export class UserStack extends cdk.Stack {
             code: Code.fromInline(fs.readFileSync(`./dist/src/user/infrastructure/lambdas/${directoryName}/index.js`).toString()),
             handler: 'index.handler',
             role: this.executionerRole,
-            environment: {
-                USER_ID: this.userId,
-                ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
-                REGION: cdk.Aws.REGION
-            }
+            environment: this.lambdaEnvironmentVariables,
+            vpc: this.vpc
         });
+    }
+
+    constructSnsTopicSubscriptionValidation() {
+        const CloudTrailBucket = new Bucket(this, 'CloudTrailS3Bucket', {
+            accessControl: BucketAccessControl.BUCKET_OWNER_FULL_CONTROL
+        })
+        CloudTrailBucket.addToResourcePolicy(new PolicyStatement({
+            resources: [CloudTrailBucket.bucketArn],
+            principals: [new ServicePrincipal("cloudtrail.amazonaws.com")],
+            actions: ["s3:GetBucketAcl"]
+        }))
+        CloudTrailBucket.addToResourcePolicy(new PolicyStatement({
+            resources: [CloudTrailBucket.arnForObjects(`AWSLogs/${cdk.Aws.ACCOUNT_ID}/*`)],
+            principals: [new ServicePrincipal("cloudtrail.amazonaws.com")],
+            actions: ["s3:PutObject"],
+            conditions: {
+                StringEquals: {
+                    "s3:x-amz-acl": "bucket-owner-full-control"
+                }
+            }
+        }))
+
+        new Trail(this, 'CloudTrail', {
+            bucket: CloudTrailBucket,
+            isMultiRegionTrail: true,
+            includeGlobalServiceEvents: true,
+            managementEvents: ReadWriteType.WRITE_ONLY
+        })
+
+        const SnsSubscriptionValidationLambda = this.constructLambda('SNSSubscriptionValidation', 'sns/sns-subscription-validation')
+        new Rule(this, 'SNSSubscriptionRule', {
+            eventPattern: {
+                source: ['aws.sns'],
+                detailType: ['AWS API Call via CloudTrail'],
+                detail: {
+                    eventSource: [
+                        "sns.amazonaws.com"
+                    ],
+                    eventName: [
+                        "Subscribe"
+                    ]
+                }
+            },
+            targets: [{
+                bind(rule: IRule, id?: string): RuleTargetConfig {
+                    return {
+                        id: id || 'SnsSubscriptionValidationLambda',
+                        arn: SnsSubscriptionValidationLambda.functionArn
+                    }
+                }
+            }]
+        })
+
+        SnsSubscriptionValidationLambda.addPermission('SnsSubscriptionValidationLambaPermission', {
+            action: 'lambda:InvokeFunction',
+            principal: new ServicePrincipal("events.amazonaws.com")
+        })
     }
 }

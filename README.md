@@ -35,6 +35,14 @@ User owns their AWS account, which includes all their posts and uploads, and the
 
 Some costs to a user may be the result of someone else's actions, such as when a follower views their posts or media, or updates to a followed account results in updates to their news feed index. It would probably be encouraged that users set a spending cap on their account to limit any chance of unexpected runaway costs.
 
+* API Gateway endpoints exposing the Follower API (for retrieving and creating posts and post activities, among other things)
+  * Use COGNITO authorizer, limit to Federal user pool
+  * Lambda functions behind these APIs will need custom logic to verify the cognitoIdentityId (`event.requestContext.identity.cognitoIdentityId`) matches expectations
+    * If the account's isPublic flag is true, then no check is needed since the AWS_IAM authorizer would have
+    already verified the cognito identity pool.
+* Route53 hosted zone (not publicly facing) for storing records to execute-api endpoints for other relevant user accounts
+  * Since we can't control the execute-api subdomain for the Follower API, following accounts can use these internal DNS
+  entries to make the endpoints deterministic based on UserId
 * DynamoDB table containing news feed entries
   * Entries are essentially updates from all subscription topics
   * We'd want to use a sort key and secondary index here, this would allow us to use the Query action to grab the last X entries in descending order to build the news feed
@@ -42,7 +50,8 @@ Some costs to a user may be the result of someone else's actions, such as when a
 * S3 object containing friends/follows
   * Simple list of account IDs
 * S3 bucket(s) for images/video
-  * CloudFront (optional for images? Required for video)
+  * Bucket is private, CloudFront provides public access
+    * Lambda@EDGE authorizer here should allow us to limit who has access
   * Auto-publishes to SNS topics for object creation events
   * Could be one bucket with “directories” for images/video, could also combine with profile/preferences data (also different directories)
 * DynamoDB table for profile/preferences data
@@ -74,12 +83,12 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Accepting a friend/follow request adds the identity to this group
   * Could allow for creation of multiple groups, would work similar to Google Plus’ circles
 * SNS Topics
-  * Post created/modified/deleted
-  * Post activity created/modified/deleted
-  * Follow request received
-  * Follow acceptance received
-  * Follow rejection/removal received
+  * Post and post activities created/modified/deleted
   * Profile modified
+* CloudTrail trail to log all activity
+  * Do we need some way to clean up the S3 bucket? or automatic expiration
+* CloudWatch Events Rule that watches CloudTrail for SNS Subscribe events
+  * Triggers Lambda for validating subscriptions
 * Lambdas
   * Requesting a follow
     * Add the account ARN to an IAM Group for follows, would need to provide access to the "Follow accepted/denied"
@@ -101,7 +110,7 @@ Some costs to a user may be the result of someone else's actions, such as when a
     * Call a lambda in the requesting account
   * Denying a follow request
     * Call a lambda in the requesting account
-  * Follow accepted, SNS topic subscription
+  * Follow accepted
     * Create subscription for news feed updates (optional, depends on account prefs)
     * Notify account owner (depending on account settings)
     * Persist relationship and cache profile data to follows table
@@ -132,6 +141,9 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Modify preferences
     * May publish to Federal stack's profile-changed SNS topic to remove or add profile data, 
     if this setting is changed
+  * Validate SNS subscriptions
+    * Watch for sns:Subscribe CloudWatch Event notifications (via CloudTrail) and remove any that
+    aren't in the approved followers list
   * Probably something to monitor account costs and notify user account if certain thresholds are hit?
 
 # Deployments

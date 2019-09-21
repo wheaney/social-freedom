@@ -1,7 +1,7 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
-import {handler} from "../../../../src/user/infrastructure/lambdas/post-create/index"
+import {handler} from "../../../../src/user/infrastructure/lambdas/direct-access/post-create/index"
 import {PublishInput} from "aws-sdk/clients/sns";
 import {PostType} from "../../../../src/shared/post-types";
 

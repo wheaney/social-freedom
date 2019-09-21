@@ -2,7 +2,8 @@ import * as AWS from "aws-sdk";
 import {GetItemOutput} from "aws-sdk/clients/dynamodb";
 import {PromiseResult} from "aws-sdk/lib/request";
 import {AWSError} from "aws-sdk";
-import {FollowDetails} from "../../../../shared/follow-request-types";
+import {FollowDetails} from "../../../../../shared/follow-request-types";
+import * as uuid from "uuid";
 
 const AccountDetailsTableKey = "AccountDetails"
 
@@ -29,23 +30,27 @@ export const handler = async (event:FollowDetails) => {
             Key: {
                 key: {S: "followRequests"}
             },
-            UpdateExpression: `SET #value = list_append(if_not_exists(#value, :empty_list), :append_value)`,
+            UpdateExpression: `SET #value = list_append(if_not_exists(#value, :empty_list), :append_value) ADD #version :version_inc`,
             ExpressionAttributeNames: {
-                '#value': 'value'
+                '#value': 'value',
+                '#version': 'version'
             },
             ExpressionAttributeValues: {
                 ':empty_list': {L: []},
                 ':append_value': {
                     L: [{
                         M: {
+                            id: {S: uuid.v1()},
                             accountId: {S: event.accountId},
                             region: {S: event.region},
                             userId: {S: event.userId},
                             iamUserArn: {S: event.iamUserArn},
+                            creationDate: {N: Date.now().toString()},
                             profile: {S: JSON.stringify(event.profile)}
                         }
                     }]
-                }
+                },
+                ':version_inc': {N: "1"}
             }
         }).promise()
 

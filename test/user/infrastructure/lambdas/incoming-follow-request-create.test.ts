@@ -1,7 +1,15 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {GetItemInput, UpdateItemInput} from "aws-sdk/clients/dynamodb";
-import {handler} from "../../../../src/user/infrastructure/lambdas/follow-request-received/index"
+import {handler} from "../../../../src/user/infrastructure/lambdas/follower-api/incoming-follow-request-create/index"
+
+jest.mock('uuid', () => ({
+    v1: () => {
+        return "someUUID"
+    }
+}))
+
+jest.spyOn(global.Date, 'now').mockImplementation(() => 1234567890)
 
 const ExpectedGetItemParams = {
     TableName: "AccountDetails-someUserId",
@@ -15,23 +23,27 @@ const ExpectedUpdateItemParams = {
     Key: {
         key: {S: "followRequests"}
     },
-    UpdateExpression: `SET #value = list_append(if_not_exists(#value, :empty_list), :append_value)`,
+    UpdateExpression: `SET #value = list_append(if_not_exists(#value, :empty_list), :append_value) ADD #version :version_inc`,
     ExpressionAttributeNames: {
-        '#value': 'value'
+        '#value': 'value',
+        '#version': 'version'
     },
     ExpressionAttributeValues: {
         ':empty_list': {L: []},
         ':append_value': {
             L: [{
                 M: {
+                    id: {S: "someUUID"},
                     accountId: {S: "followingAccountId"},
                     region: {S: "followingRegion"},
                     userId: {S: "followingUserId"},
                     iamUserArn: {S: "followingUserARN"},
+                    creationDate: {N: "1234567890"},
                     profile: {S: "{\"name\":\"Wayne Heaney\",\"photoUrl\":\"somePhotoUrl\"}"}
                 }
             }]
-        }
+        },
+        ':version_inc': {N: "1"}
     }
 }
 
