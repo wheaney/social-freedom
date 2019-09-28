@@ -1,7 +1,7 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
-import {handler} from "../../../../src/federal/infrastructure/lambdas/account-registration/index"
+import {doHandle as handler} from "../../../../src/federal/infrastructure/lambdas/account-registration"
 
 jest.mock('uuid', () => ({
     v1: () => {
@@ -20,7 +20,7 @@ describe("the AccountRegistration handler", () => {
             expect(params).toStrictEqual({
                 TableName: 'IdentityToAccount',
                 Item: {
-                    "identity": {S: "identity"},
+                    "cognitoIdentityId": {S: "cognitoIdentityId"},
                     "accountId": {S: "accountId"},
                     "region": {S: "region"},
                     "userId": {S: "someUUID"}
@@ -31,7 +31,7 @@ describe("the AccountRegistration handler", () => {
         })
 
         await handler({
-            identity: "identity",
+            cognitoIdentityId: "cognitoIdentityId",
             accountId: "accountId",
             region: "region"
         })
@@ -45,7 +45,7 @@ describe("the AccountRegistration handler", () => {
             expect(params).toStrictEqual({
                 TableName: 'IdentityToAccount',
                 Item: {
-                    "identity": {S: "identity"},
+                    "cognitoIdentityId": {S: "cognitoIdentityId"},
                     "accountId": {S: "accountId"},
                     "region": {S: "region"},
                     "userId": {S: "someUUID"}
@@ -57,7 +57,7 @@ describe("the AccountRegistration handler", () => {
 
         try {
             await handler({
-                identity: "identity",
+                cognitoIdentityId: "cognitoIdentityId",
                 accountId: "accountId",
                 region: "region"
             })

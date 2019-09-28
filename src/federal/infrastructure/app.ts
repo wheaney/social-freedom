@@ -1,10 +1,11 @@
 import 'source-map-support/register';
 import * as cdk from "@aws-cdk/core";
-import {Code, Runtime, Function as LambdaFunction} from "@aws-cdk/aws-lambda";
-import {Table, AttributeType} from "@aws-cdk/aws-dynamodb"
-import {PolicyStatement, ServicePrincipal, Role} from "@aws-cdk/aws-iam"
-import * as fs from "fs";
 import {CfnParameter} from "@aws-cdk/core";
+import {Code} from "@aws-cdk/aws-lambda";
+import {AttributeType, Table} from "@aws-cdk/aws-dynamodb"
+import {PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
+import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
+import {ApiHelper, LambdaHelper} from "../../shared/infrastructure-utils";
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'FederalStack');
@@ -55,17 +56,26 @@ new cdk.CfnInclude(stack, "OtherInfrastructure", {
     template: OtherInfrastructure()
 });
 
-// Lambda references assume that tsc has compiled all *.ts files to the dist directory
-new LambdaFunction(stack, 'AccountRegistrationHandler', {
-    runtime: Runtime.NODEJS_8_10,
-    code: Code.fromInline(fs.readFileSync('./dist/src/federal/infrastructure/lambdas/account-registration/index.js').toString()),
-    handler: 'index.handler',
-    role: ExecutionerRole
-});
+const Api = new RestApi(stack, "API", {
+    endpointTypes: [EndpointType.EDGE]
+})
+
+const CognitoAuthorizer = new CfnAuthorizer(stack, "CognitoAuthorizer", {
+    name: "CognitoAuthorizer",
+    type: AuthorizationType.COGNITO,
+    identitySource: "method.request.header.Authorization",
+    restApiId: Api.restApiId,
+    providerArns: ['placeholder'] // TODO - construct user pool
+})
+const Lambdas = Code.fromAsset('./dist/src/federal/infrastructure/lambdas')
+const Helper = new LambdaHelper(stack, ExecutionerRole, {}, Lambdas)
+const ApiUtil = new ApiHelper(Helper, CognitoAuthorizer, "social-freedom.com")
+
+ApiUtil.constructLambdaApi(Api.root, 'register', 'POST', 'account-registration')
 
 const IdentityToAccountTable = new Table(stack, "IdentityToAccount", {
     partitionKey: {
-        name: "identity",
+        name: "cognitoIdentityId",
         type: AttributeType.STRING
     },
     tableName: "IdentityToAccount"

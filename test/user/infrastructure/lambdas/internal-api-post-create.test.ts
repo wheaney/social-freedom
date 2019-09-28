@@ -1,12 +1,12 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
-import {handler} from "../../../../src/user/infrastructure/lambdas/direct-access/post-create"
+import {doHandle as handler} from "../../../../src/user/infrastructure/lambdas/internal-api-post-create"
 import {PublishInput} from "aws-sdk/clients/sns";
-import {PostType} from "../../../../src/shared/post-types";
+import {PostType} from "../../../../src/user/infrastructure/lambdas/shared/post-types";
 
 const ExpectedPutItemParams = {
-    TableName: 'Posts-someUserId',
+    TableName: 'PostsTableName',
     Item: {
         "key": {S: "Posts"},
         "id": {S: "someUUID"},
@@ -51,7 +51,8 @@ beforeAll(async (done) => {
     process.env = {
         USER_ID: "someUserId",
         REGION: "us-west-1",
-        ACCOUNT_ID: "12345"
+        ACCOUNT_ID: "12345",
+        POSTS_TABLE: "PostsTableName"
     }
     done();
 });

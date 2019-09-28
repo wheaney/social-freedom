@@ -1,9 +1,16 @@
 import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
-import {PostCreateEvent} from "../../../../shared/post-types";
+import {internalAPIIdentityCheck} from "./shared/util";
+import {APIGatewayEvent} from "aws-lambda";
+import {PostCreateEvent} from "./shared/post-types";
 
-const TableKey = "Posts"
-export const handler = async (event:PostCreateEvent) => {
+export const handler = async (event:APIGatewayEvent) => {
+    internalAPIIdentityCheck(event)
+
+    return await doHandle(JSON.parse(event.body))
+};
+
+export const doHandle = async (request:PostCreateEvent) => {
     const awsAccountId = process.env.ACCOUNT_ID
     const awsRegion = process.env.REGION
     const userId = process.env.USER_ID
@@ -12,15 +19,15 @@ export const handler = async (event:PostCreateEvent) => {
     const timestamp:number = new Date(Date.now()).getTime()
     const id = uuid.v1()
     await new AWS.DynamoDB().putItem({
-        TableName: `Posts-${userId}`,
+        TableName: process.env.POSTS_TABLE,
         Item: {
-            "key": {S: TableKey},
+            "key": {S: 'Posts'},
             "id": {S: id},
             "timeSortKey": {S: `${timestamp}-${id}`},
             "timestamp": {N: `${timestamp}`},
-            "type": {S: event.type},
-            "body": {S: event.body},
-            "mediaUrl": {S: event.mediaUrl} // TODO - validate this
+            "type": {S: request.type},
+            "body": {S: request.body},
+            "mediaUrl": {S: request.mediaUrl} // TODO - validate this
         }
     }).promise()
 
@@ -28,13 +35,13 @@ export const handler = async (event:PostCreateEvent) => {
     await new AWS.SNS().publish({
         TopicArn: `arn:aws:sns:${awsRegion}:${awsAccountId}:Posts-${userId}`,
         Message: JSON.stringify({
-            default: `create ${event.type} ${event.body} ${event.mediaUrl}`,
+            default: `create ${request.type} ${request.body} ${request.mediaUrl}`,
             eventType: "create",
             id: id,
-            type: event.type,
-            body: event.body,
-            mediaUrl: event.mediaUrl
+            type: request.type,
+            body: request.body,
+            mediaUrl: request.mediaUrl
         }),
         MessageStructure: "json"
     }).promise()
-};
+}

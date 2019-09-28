@@ -8,7 +8,6 @@ Here is what the Federal and User-owned infrastructure accounts would maintain. 
 
 ## Federal account
 The central account whose main duty is to orchestrate the sign-in and then delegate to the user's own AWS account. A secondary function of this account is providing search to allow accounts to find one another, but this is opt-in.
-* VPC
 * ElasticSearch index to find accounts by email, phone, name, etc…
   * Accounts may opt-in to this via preferences
 * Static website assets in S3/CloudFront
@@ -19,12 +18,15 @@ The central account whose main duty is to orchestrate the sign-in and then deleg
 * SNS topics
   * Profile updated
 * Lambdas
-  * Account registration, Cognito identity, AWS region, and AWS account ID provided
+  * Account registration
+    * Cognito identity and account routing details provided
     * Verify identity, region, and account ID
     * Add identity to account id mapping in DynamoDB
     * Deploy User CodePipeline CloudFormation template to account
       * Will need to fail back to the UX with instructions on adding an IAM policy if this fails
     * Invoked directly from UX synchronously, no SNS topic needed
+  * Identity Account verification
+    * Call to verify that a cognitoIdentityId is associated with the provided account details (e.g. followerApiDomain)
   * Account deregistration
     * Reverse of account registration
   * Account profile updated, SNS topic subscription
@@ -40,9 +42,6 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Lambda functions behind these APIs will need custom logic to verify the cognitoIdentityId (`event.requestContext.identity.cognitoIdentityId`) matches expectations
     * If the account's isPublic flag is true, then no check is needed since the AWS_IAM authorizer would have
     already verified the cognito identity pool.
-* Route53 hosted zone (not publicly facing) for storing records to execute-api endpoints for other relevant user accounts
-  * Since we can't control the execute-api subdomain for the Follower API, following accounts can use these internal DNS
-  entries to make the endpoints deterministic based on UserId
 * DynamoDB table containing news feed entries
   * Entries are essentially updates from all subscription topics
   * We'd want to use a sort key and secondary index here, this would allow us to use the Query action to grab the last X entries in descending order to build the news feed
