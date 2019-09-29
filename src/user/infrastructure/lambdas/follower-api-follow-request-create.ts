@@ -37,11 +37,16 @@ export const followRequestCreate = async (cognitoAuthToken: string, request:Foll
                 L: [{
                     M: {
                         id: {S: requestId},
-                        accountId: {S: request.identifiers.accountId},
-                        region: {S: request.identifiers.region},
-                        userId: {S: request.identifiers.userId},
-                        apiDomainName: {S: request.identifiers.apiDomainName},
-                        creationDate: {N: Date.now().toString()},
+                        identifiers: {
+                            M: {
+                                cognitoIdentityId: {S: request.identifiers.cognitoIdentityId},
+                                accountId: {S: request.identifiers.accountId},
+                                region: {S: request.identifiers.region},
+                                userId: {S: request.identifiers.userId},
+                                apiDomainName: {S: request.identifiers.apiDomainName},
+                                creationDate: {N: Date.now().toString()}
+                            }
+                        },
                         profile: {S: JSON.stringify(request.profile)}
                     }
                 }]

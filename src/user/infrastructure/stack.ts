@@ -30,16 +30,16 @@ export class UserStack extends cdk.Stack {
             }
         })
 
-        const FollowersTable = this.buildSortTable("Followers", "key", "cognitoIdentityId", false)
+        const FollowersTable = this.buildSortTable("Followers", "key", "identifiers.cognitoIdentityId", false)
         FollowersTable.addLocalSecondaryIndex({
             indexName: 'FollowersByUserId',
             projectionType: ProjectionType.KEYS_ONLY,
             sortKey: {
-                name: "userId",
+                name: "identifiers.userId",
                 type: AttributeType.STRING
             }
         })
-        const FollowingTable = this.buildSortTable("Following", "key", "userId", false)
+        const FollowingTable = this.buildSortTable("Following", "key", "identifiers.userId", false)
         const FeedTable = this.buildSortTable("Feed", "key")
         const PostsTable = this.buildSortTable("Posts", "key")
         const PostActivitiesTable = this.buildSortTable("PostActivities", "postId")
@@ -141,7 +141,7 @@ export class UserStack extends cdk.Stack {
                 type: AttributeType.STRING
             },
             sortKey: {
-                name: "id",
+                name: sortKey,
                 type: AttributeType.STRING
             }
         });

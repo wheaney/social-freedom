@@ -77,10 +77,6 @@ Some costs to a user may be the result of someone else's actions, such as when a
   * Stores metadata regarding all reactions/comments to a post
   * Same storage strategy as news feed entries: hardcoded primary key and usage secondary index 
   sort key to allow for Query to grab the X most recent
-* IAM roles for different permission levels
-* IAM groups for friends and other allowed follows
-  * Accepting a friend/follow request adds the identity to this group
-  * Could allow for creation of multiple groups, would work similar to Google Plus’ circles
 * SNS Topics
   * Post and post activities created/modified/deleted
   * Profile modified
@@ -96,13 +92,6 @@ Some costs to a user may be the result of someone else's actions, such as when a
       * Would require that this Lambda ARN is deterministic, should be achievable if we know the account
       ARN and the Lambda function name never changes
   * Receiving a follow request
-    * One of 3 return values: DENIED, PENDING, and ACCEPTED
-      * DENIED if the requesting account is already blocked or this user account otherwise is set to
-      auto-deny
-      * ACCEPTED if no auto-deny conditions are met and this user account is completely public
-        * Sort of a Twitter-style account, follow requests don't require acceptance
-      * PENDING if neither of the above
-        * Add this account ARN to a list somewhere for review on next log-in
   * Accepting a follow request
     * Adds Cognito identity to appropriate IAM group, granting subscribe permissions to SNS topics
     and read permissions to posts and comments
@@ -157,7 +146,7 @@ The stack would simply build a CodePipeline pipeline. We could probably use the 
 * [Lambda invoke action](https://docs.aws.amazon.com/cdk/api/latest/docs/@aws-cdk_aws-codepipeline-actions.LambdaInvokeActionProps.html)
 to write relevant CloudFormation outputs to AccountDetails table (or some other persistence that other user accounts would have access to)
 
-I also found this: the [apo-delivery](https://github.com/aws/aws-cdk/tree/master/packages/@aws-cdk/app-delivery) CDK 
+I also found this: the [app-delivery](https://github.com/aws/aws-cdk/tree/master/packages/@aws-cdk/app-delivery) CDK 
 library seems built just for this usage, and the example on that page can be used as a base for what
 we need to do here.
 
@@ -180,20 +169,10 @@ user AWS accounts. They're mostly intended for dev, but may be useful for the fi
 federal account.
 
 # Open Questions
-* Cross-region account communications, what's feasible?
-  * Lambdas can subscribe to SNS topics in any region
-* How does blocking someone work? If I comment on a friend's post, that comment (per current design) 
-would be stored in that friend's AWS account, but would need to be kept apprised of who my account
-is currently blocking (even if that changes after I make the comment). This needs further thought. A 
-couple possible solutions:
-  * "Comment at your own risk" - comments on someone else's post is visible to anyone that can see that 
-  post, no other conditions applied
-  * Instead of direct DynamoDB access for all followers/friends of an account, put this access behind
-  an API with some thin compute layer (Lambda) that does some additional (not AWS out-of-the-box) 
-  access control check. This could be as complex as referencing policies in other accounts, or as
-  simple as comparing to a blacklist of account IDs that were snapshotted at the time of the comment
-  (snapshotting in this case implies that the blacklist won't stay updated if more accounts are blocked).
-* Any downside to directly triggering Lambda's across accounts? Is this less failure-proof than an publishing
-to an SNS topic or SQS queue in that account?
 * Can a "requester pays" bucket be used for images/video so that only the people consuming the media 
 get charged? This may not be possible with our use of CloudFront.
+* How will "blocking" work? A user account can easily manage what its own APIs expose to accounts it may have blocked,
+but if a user comments on a friend's post, the current design will have that friend's account "owning" that comment data. To 
+restrict who can see a comment, a user account would need to keep itself apprised of all blocks for all friends'
+accounts as well, which seems like a lot to manage. For now I think that post activities like this will need to simply be
+"visible to all this friend's friends, regardless of your own blocks."

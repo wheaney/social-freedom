@@ -3,6 +3,7 @@ import * as AWS from "aws-sdk";
 import {internalAPIIdentityCheck} from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostCreateEvent} from "./shared/post-types";
+import {PostsTablePartitionKey} from "./shared/constants";
 
 export const handler = async (event:APIGatewayEvent) => {
     internalAPIIdentityCheck(event)
@@ -21,7 +22,7 @@ export const doHandle = async (request:PostCreateEvent) => {
     await new AWS.DynamoDB().putItem({
         TableName: process.env.POSTS_TABLE,
         Item: {
-            "key": {S: 'Posts'},
+            "key": {S: PostsTablePartitionKey},
             "id": {S: id},
             "timeSortKey": {S: `${timestamp}-${id}`},
             "timestamp": {N: `${timestamp}`},

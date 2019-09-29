@@ -35,11 +35,16 @@ const ExpectedUpdateItemParams = {
             L: [{
                 M: {
                     id: {S: "someUUID"},
-                    accountId: {S: "followingAccountId"},
-                    region: {S: "followingRegion"},
-                    userId: {S: "followingUserId"},
-                    apiDomainName: {S: "apiDomainName"},
-                    creationDate: {N: "1234567890"},
+                    identifiers: {
+                        M: {
+                            cognitoIdentityId: {S: "cognitoIdentityId"},
+                            accountId: {S: "followingAccountId"},
+                            region: {S: "followingRegion"},
+                            userId: {S: "followingUserId"},
+                            apiDomainName: {S: "apiDomainName"},
+                            creationDate: {N: "1234567890"}
+                        }
+                    },
                     profile: {S: "{\"name\":\"Wayne Heaney\",\"photoUrl\":\"somePhotoUrl\"}"}
                 }
             }]
@@ -51,6 +56,7 @@ const ExpectedUpdateItemParams = {
 async function invokeHandler() {
     return await followRequestCreate("authToken", {
         identifiers: {
+            cognitoIdentityId: "cognitoIdentityId",
             accountId: "followingAccountId",
             region: "followingRegion",
             userId: "followingUserId",
