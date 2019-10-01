@@ -1,276 +1,132 @@
-import * as AWSMock from "aws-sdk-mock";
-import * as AWS from "aws-sdk";
-import {AttributeMap, GetItemInput, GetItemOutput, PutItemInput, UpdateItemInput} from "aws-sdk/clients/dynamodb";
-import {AccountDetailsFollowRequestsKey} from "../../../../src/user/infrastructure/lambdas/shared/constants";
-import {internalFollowRequestRespond} from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
+import * as InternalFollowRequestCreate
+    from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-create";
 import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
+import {
+    AccountDetailsFollowersKey,
+    AccountDetailsIncomingFollowRequestsKey
+} from "../../../../src/user/infrastructure/lambdas/shared/constants";
+import {internalFollowRequestRespond} from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
+import {FollowingAccountDetails, setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
 
 jest.mock("../../../../src/user/infrastructure/lambdas/shared/util")
 const mockedUtil = Util as jest.Mocked<typeof Util>
 
-const ExpectedGetItemParams = {
-    TableName: "AccountDetails",
-    Key: {
-        key: {S: AccountDetailsFollowRequestsKey}
-    }
-}
+const mockedConsoleError = jest.fn()
+jest.spyOn(global.console, 'error').mockImplementation(mockedConsoleError)
 
-const ExpectedMyAccountDetails = {
-    identifiers: {
-        cognitoIdentityId: "myIdentityId",
-        userId: "someUserId",
-        region: "us-west-1",
-        accountId: "12345",
-        apiDomainName: "myApiDomain.com"
-    },
-    profile: {
-        name: "Wayne Heaney",
-        photoUrl: "somePhotoUrl"
-    }
-}
+const mockedRequestCreate = jest.fn() as jest.MockedFunction<typeof InternalFollowRequestCreate.internalFollowRequestCreate>
+jest.spyOn(InternalFollowRequestCreate, 'internalFollowRequestCreate').mockImplementation(mockedRequestCreate)
 
-function followRequestAttributeValue(requestId: string): AttributeMap {
-    return {
-        M: {
-            id: {S: requestId},
-            identifiers: {
-                M: {
-                    apiDomainName: {S: `${requestId}.apiDomain.com`},
-                    userId: {S: `${requestId}-userId`}
-                }
-            },
-            profile: {
-                M: {
-                    name: {S: `${requestId}-name`},
-                    photoUrl: {S: `${requestId}-photoUrl`}
-                }
-            }
-        }
-    } as AttributeMap
-}
-
-async function invoke(accepted: boolean) {
+async function invokeHandler(accepted: boolean) {
     return await internalFollowRequestRespond("authToken", {
-        requestId: "requestId",
+        userId: "userId",
         accepted: accepted
     })
 }
 
 beforeAll(async (done) => {
-    process.env = {
-        USER_ID: "someUserId",
-        REGION: "us-west-1",
-        ACCOUNT_ID: "12345",
-        COGNITO_IDENTITY_ID: "myIdentityId",
-        ACCOUNT_DETAILS_TABLE: "AccountDetails",
-        FOLLOWERS_TABLE: "Followers",
-        API_DOMAIN_NAME: "myApiDomain.com"
-    }
+    setupEnvironmentVariables()
     done();
 });
 
 beforeEach(async (done) => {
-    AWSMock.setSDKInstance(AWS);
+    jest.clearAllMocks()
     done()
 });
 
 afterEach(async (done) => {
-    AWSMock.restore('DynamoDB');
     done()
 })
 
 describe("the internal FollowRequestRespond handler", () => {
     it("should do nothing if a matching request isn't found", async () => {
-        AWSMock.mock('DynamoDB', 'getItem', (params: GetItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedGetItemParams)
+        mockedUtil.dynamoSetContains.mockResolvedValue(false)
 
-            callback(null, {
-                Item: {
-                    value: {
-                        L: [
-                            followRequestAttributeValue("unmatchedRequestId")
-                        ]
-                    }
-                }
-            } as GetItemOutput);
+        await invokeHandler(false)
+
+        expect(mockedConsoleError).toHaveBeenCalledWith('Received invalid InternalFollowResponse', {
+            requestExists: false,
+            requesterDetailsExists: false
         })
+        expect(mockedUtil.apiRequest).not.toHaveBeenCalled()
+    });
 
-        await invoke(false)
+    it("should do nothing if a request account details aren't found", async () => {
+        mockedUtil.dynamoSetContains.mockResolvedValue(true)
+        mockedUtil.getTrackedAccountDetails.mockResolvedValue(undefined)
 
+        await invokeHandler(false)
+
+        expect(mockedConsoleError).toHaveBeenCalledWith('Received invalid InternalFollowResponse', {
+            requestExists: true,
+            requesterDetailsExists: false
+        })
         expect(mockedUtil.apiRequest).not.toHaveBeenCalled()
     });
 
     it("should reject and remove the follow request, if not accepted", async () => {
-        AWSMock.mock('DynamoDB', 'getItem', (params: GetItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedGetItemParams)
+        mockedUtil.dynamoSetContains.mockResolvedValue(true)
+        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetails)
 
-            callback(null, {
-                Item: {
-                    value: {
-                        L: [
-                            followRequestAttributeValue("unmatchedRequestId"),
-                            followRequestAttributeValue("requestId")
-                        ]
-                    },
-                    version: {N: "10"}
-                }
-            } as GetItemOutput);
-        })
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            expect(params).toMatchObject({
-                TableName: "AccountDetails",
-                Key: {key: {S: AccountDetailsFollowRequestsKey}},
-                ExpressionAttributeValues: {
-                    ':version': {N: "10"}
-                }
-            })
+        await invokeHandler(false)
 
-            callback(null, {})
-        })
-
-        await invoke(false)
-
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-response',
+        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('apiDomainName', '/follower/follow-request-response',
             'authToken', 'POST', {
                 accepted: false
             })
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'userId')
     });
 
     it("should accept and remove the follow request and add a Followers entry, if accepted", async () => {
-        AWSMock.mock('DynamoDB', 'getItem', (params: GetItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedGetItemParams)
-
-            callback(null, {
-                Item: {
-                    value: {
-                        L: [
-                            followRequestAttributeValue("requestId")
-                        ]
-                    },
-                    version: {N: "10"}
-                }
-            } as GetItemOutput);
-        })
-        AWSMock.mock('DynamoDB', 'putItem', (params: PutItemInput, callback: Function) => {
-            expect(params).toMatchObject({
-                TableName: "Followers",
-                Item: {
-                    identifiers: {
-                        M: {
-                            apiDomainName: {S: "requestId.apiDomain.com"},
-                            userId: {S: "requestId-userId"}
-                        }
-                    },
-                    profile: {
-                        M: {
-                            name: {S: "requestId-name"},
-                            photoUrl: {S: "requestId-photoUrl"}
-                        }
-                    }
-                }
-            })
-
-            callback(null, {})
-        })
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            callback(null, {})
-        })
+        mockedUtil.dynamoSetContains.mockResolvedValue(true)
+        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetails)
+        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
         mockedUtil.isAccountPublic.mockResolvedValue(true)
-        mockedUtil.getProfile.mockResolvedValue({
-            name: "Wayne Heaney",
-            photoUrl: "somePhotoUrl"
-        })
 
-        await invoke(true)
+        await invokeHandler(true)
 
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-response',
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'userId')
+        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('apiDomainName', '/follower/follow-request-response',
             'authToken', 'POST', {
                 accepted: true,
-                accountDetails: ExpectedMyAccountDetails
+                accountDetails: ThisAccountDetails
             })
-        expect(mockedUtil.apiRequest).not.toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-create',
-            'authToken', 'POST', ExpectedMyAccountDetails)
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalled()
+        expect(mockedRequestCreate).not.toHaveBeenCalled()
     });
 
     it("should not automatically reciprocate follow request if already followed", async () => {
-        AWSMock.mock('DynamoDB', 'getItem', (params: GetItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedGetItemParams)
-
-            callback(null, {
-                Item: {
-                    value: {
-                        L: [
-                            followRequestAttributeValue("requestId")
-                        ]
-                    },
-                    version: {N: "10"}
-                }
-            } as GetItemOutput);
-        })
-        AWSMock.mock('DynamoDB', 'putItem', (params: PutItemInput, callback: Function) => {
-            callback(null, {})
-        })
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            callback(null, {})
-        })
+        mockedUtil.dynamoSetContains.mockResolvedValue(true)
+        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetails)
+        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
         mockedUtil.isAccountPublic.mockResolvedValue(false)
         mockedUtil.isFollowing.mockResolvedValue(true)
-        mockedUtil.getProfile.mockResolvedValue({
-            name: "Wayne Heaney",
-            photoUrl: "somePhotoUrl"
-        })
 
-        await invoke(true)
+        await invokeHandler(true)
 
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-response',
-            'authToken', 'POST', {
-                accepted: true,
-                accountDetails: ExpectedMyAccountDetails
-            })
-        expect(mockedUtil.isFollowing).toHaveBeenCalledWith("requestId-userId")
-        expect(mockedUtil.apiRequest).not.toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-create',
-            'authToken', 'POST', ExpectedMyAccountDetails)
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalled()
+        expect(mockedUtil.apiRequest).toHaveBeenCalled()
+        expect(mockedUtil.isFollowing).toHaveBeenCalledWith("userId")
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalled()
+        expect(mockedRequestCreate).not.toHaveBeenCalled()
     });
 
     it("should automatically reciprocate follow request if not a public account and not already followed", async () => {
-        AWSMock.mock('DynamoDB', 'getItem', (params: GetItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedGetItemParams)
-
-            callback(null, {
-                Item: {
-                    value: {
-                        L: [
-                            followRequestAttributeValue("requestId")
-                        ]
-                    },
-                    version: {N: "10"}
-                }
-            } as GetItemOutput);
-        })
-        AWSMock.mock('DynamoDB', 'putItem', (params: PutItemInput, callback: Function) => {
-            callback(null, {})
-        })
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            callback(null, {})
-        })
+        mockedUtil.dynamoSetContains.mockResolvedValue(true)
+        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetails)
+        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
         mockedUtil.isAccountPublic.mockResolvedValue(false)
         mockedUtil.isFollowing.mockResolvedValue(false)
-        mockedUtil.getProfile.mockResolvedValue({
-            name: "Wayne Heaney",
-            photoUrl: "somePhotoUrl"
-        })
 
-        await invoke(true)
+        await invokeHandler(true)
 
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-response',
-            'authToken', 'POST', {
-                accepted: true,
-                accountDetails: ExpectedMyAccountDetails
-            })
-        expect(mockedUtil.isFollowing).toHaveBeenCalledWith("requestId-userId")
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('requestId.apiDomain.com', '/follower/follow-request-create',
-            'authToken', 'POST', ExpectedMyAccountDetails)
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalled()
+        expect(mockedUtil.apiRequest).toHaveBeenCalled()
+        expect(mockedUtil.isFollowing).toHaveBeenCalled()
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalled()
+        expect(mockedRequestCreate).toHaveBeenCalledWith('authToken', {
+            userId: 'userId',
+            ...FollowingAccountDetails
+        }, ThisAccountDetails)
     });
-
-    // TODO - test ConditionalCheckFailedException retry case
 });

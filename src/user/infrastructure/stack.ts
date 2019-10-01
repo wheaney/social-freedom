@@ -1,5 +1,5 @@
 import * as cdk from "@aws-cdk/core";
-import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam";
+import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal, AnyPrincipal} from "@aws-cdk/aws-iam";
 import {AttributeType, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
@@ -9,11 +9,12 @@ import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/
 import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
 import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 import {ApiHelper, LambdaHelper} from "../../shared/infrastructure-utils";
+import {Duration} from "@aws-cdk/core";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
 
-    constructor(app: cdk.App, federalApiDomainName: string, userId: string, cognitoIdentityId: string, userPoolArn: string, authUserArn: string) {
+    constructor(app: cdk.App, federalApiDomainName: string, userId: string, userPoolArn: string, authUserArn: string) {
         super(app, `UserStack-${userId}`);
 
         this.userId = userId;
@@ -30,23 +31,32 @@ export class UserStack extends cdk.Stack {
             }
         })
 
-        const FollowersTable = this.buildSortTable("Followers", "key", "identifiers.cognitoIdentityId", false)
-        FollowersTable.addLocalSecondaryIndex({
-            indexName: 'FollowersByUserId',
-            projectionType: ProjectionType.KEYS_ONLY,
-            sortKey: {
-                name: "identifiers.userId",
+        const TrackedAccounts = new Table(this, "TrackedAccounts", {
+            partitionKey: {
+                name: "userId",
                 type: AttributeType.STRING
             }
-        })
-        const FollowingTable = this.buildSortTable("Following", "key", "identifiers.userId", false)
+        });
         const FeedTable = this.buildSortTable("Feed", "key")
         const PostsTable = this.buildSortTable("Posts", "key")
         const PostActivitiesTable = this.buildSortTable("PostActivities", "postId")
 
+        const ProfileUpdatesTopic = new Topic(this, 'ProfileUpdatesTopic', {
+            topicName: `ProfileUpdates-${userId}`
+        })
+        ProfileUpdatesTopic.addToResourcePolicy(new PolicyStatement({
+            principals: [new AnyPrincipal()], // SNS subscription validation lambda will remove anyone that shouldn't subscribe
+            actions: ['sns:Subscribe'],
+            resources: [ProfileUpdatesTopic.topicArn]
+        }))
         const PostsTopic = new Topic(this, "PostsTopic", {
             topicName: `Posts-${userId}`
         })
+        PostsTopic.addToResourcePolicy(new PolicyStatement({
+            principals: [new AnyPrincipal()], // SNS subscription validation lambda will remove anyone that shouldn't subscribe
+            actions: ['sns:Subscribe'],
+            resources: [PostsTopic.topicArn]
+        }))
 
         const MediaBucket = new Bucket(this, "MediaBucket")
 
@@ -80,28 +90,13 @@ export class UserStack extends cdk.Stack {
             actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem']
         }));
         ExecutionerRole.addToPolicy(new PolicyStatement({
-            resources: [PostsTopic.topicArn],
+            resources: [PostsTopic.topicArn, ProfileUpdatesTopic.topicArn],
             actions: ['sns:Publish']
         }));
 
         const Api = new RestApi(this, "API", {
             endpointTypes: [EndpointType.EDGE]
         })
-        const EnvironmentVariables = {
-            USER_ID: this.userId,
-            COGNITO_IDENTITY_ID: cognitoIdentityId,
-            ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
-            REGION: cdk.Aws.REGION,
-            ACCOUNT_DETAILS_TABLE: AccountDetailsTable.tableName,
-            FEED_TABLE: FeedTable.tableName,
-            POSTS_TABLE: PostsTable.tableName,
-            POST_ACTIVITIES_TABLE: PostActivitiesTable.tableName,
-            FOLLOWERS_TABLE: FollowersTable.tableName,
-            FOLLOWING_TABLE: FollowingTable.tableName,
-            MEDIA_BUCKET: MediaBucket.bucketName,
-            CDN_DOMAIN_NAME: WebDistribution.domainName,
-            API_DOMAIN_NAME: Api.domainName
-        }
 
         const CognitoAuthorizer = new CfnAuthorizer(this, "CognitoAuthorizer", {
             name: "CognitoAuthorizer",
@@ -111,8 +106,27 @@ export class UserStack extends cdk.Stack {
             providerArns: [userPoolArn]
         })
 
-        const Lambdas = Code.fromAsset('./dist/src/user/infrastructure/lambdas')
-        const LambdaUtils = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, Lambdas)
+        const EnvironmentVariables = {
+            USER_ID: this.userId,
+            ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
+            REGION: cdk.Aws.REGION,
+            ACCOUNT_DETAILS_TABLE: AccountDetailsTable.tableName,
+            FEED_TABLE: FeedTable.tableName,
+            POSTS_TABLE: PostsTable.tableName,
+            POST_ACTIVITIES_TABLE: PostActivitiesTable.tableName,
+            TRACKED_ACCOUNTS_TABLE: TrackedAccounts.tableName,
+            MEDIA_BUCKET: MediaBucket.bucketName,
+            CDN_DOMAIN_NAME: WebDistribution.domainName,
+            API_DOMAIN_NAME: Api.domainName
+        }
+
+        const LambdaCode = Code.fromAsset('./dist/src/user/infrastructure/lambdas')
+        const ProfileUpdateHandler = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode).constructLambda('sns-tracked-account-profile-updated')
+
+        const LambdaUtils = new LambdaHelper(this, ExecutionerRole, {
+            ...EnvironmentVariables,
+            PROFILE_UPDATE_HANDLER: ProfileUpdateHandler.functionArn
+        }, LambdaCode)
         const ApiUtils = new ApiHelper(LambdaUtils, CognitoAuthorizer, federalApiDomainName)
 
         const FollowerApi = Api.root.addResource('follower')
@@ -162,7 +176,10 @@ export class UserStack extends cdk.Stack {
 
     constructSnsTopicSubscriptionValidation(validationLambda: LambdaFunction) {
         const CloudTrailBucket = new Bucket(this, 'CloudTrailS3Bucket', {
-            accessControl: BucketAccessControl.BUCKET_OWNER_FULL_CONTROL
+            accessControl: BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
+            lifecycleRules: [{
+                expiration: Duration.days(7)
+            }]
         })
         CloudTrailBucket.addToResourcePolicy(new PolicyStatement({
             resources: [CloudTrailBucket.bucketArn],

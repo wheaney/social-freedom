@@ -8,10 +8,10 @@ import {PostsTablePartitionKey} from "./shared/constants";
 export const handler = async (event:APIGatewayEvent) => {
     internalAPIIdentityCheck(event)
 
-    return await doHandle(JSON.parse(event.body))
+    return await postCreate(JSON.parse(event.body))
 };
 
-export const doHandle = async (request:PostCreateEvent) => {
+export const postCreate = async (request:PostCreateEvent) => {
     const awsAccountId = process.env.ACCOUNT_ID
     const awsRegion = process.env.REGION
     const userId = process.env.USER_ID

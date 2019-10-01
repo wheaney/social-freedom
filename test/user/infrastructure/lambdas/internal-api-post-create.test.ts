@@ -1,9 +1,10 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
-import {doHandle as handler} from "../../../../src/user/infrastructure/lambdas/internal-api-post-create"
+import {postCreate} from "../../../../src/user/infrastructure/lambdas/internal-api-post-create"
 import {PublishInput} from "aws-sdk/clients/sns";
 import {PostType} from "../../../../src/user/infrastructure/lambdas/shared/post-types";
+import {setupEnvironmentVariables} from "./test-utils";
 
 const ExpectedPutItemParams = {
     TableName: 'PostsTableName',
@@ -32,7 +33,7 @@ const ExpectedPublishParams = {
 }
 
 async function invokeHandler() {
-    await handler({
+    await postCreate({
         type: PostType.Text,
         body: "postBody",
         mediaUrl: "postMediaUrl"
@@ -48,13 +49,13 @@ jest.mock('uuid', () => ({
 jest.spyOn(global.Date, 'now').mockImplementation(() => 1234567890)
 
 beforeAll(async (done) => {
-    process.env = {
-        USER_ID: "someUserId",
-        REGION: "us-west-1",
-        ACCOUNT_ID: "12345",
-        POSTS_TABLE: "PostsTableName"
-    }
+    setupEnvironmentVariables()
     done();
+});
+
+beforeEach(async (done) => {
+    jest.clearAllMocks()
+    done()
 });
 
 describe("the PostCreate handler", () => {

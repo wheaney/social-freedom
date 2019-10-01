@@ -56,34 +56,36 @@ new cdk.CfnInclude(stack, "OtherInfrastructure", {
     template: OtherInfrastructure()
 });
 
+const AccountsTable = new Table(stack, "Accounts", {
+    partitionKey: {
+        name: "userId",
+        type: AttributeType.STRING
+    }
+});
+
+ExecutionerRole.addToPolicy(new PolicyStatement({
+    resources: [AccountsTable.tableArn],
+    actions: ['dynamodb:putItem']
+}));
+
 const Api = new RestApi(stack, "API", {
     endpointTypes: [EndpointType.EDGE]
 })
+const EnvironmentVariables = {
+    ACCOUNTS_TABLE: AccountsTable.tableName
+}
 
 const CognitoAuthorizer = new CfnAuthorizer(stack, "CognitoAuthorizer", {
     name: "CognitoAuthorizer",
     type: AuthorizationType.COGNITO,
     identitySource: "method.request.header.Authorization",
     restApiId: Api.restApiId,
-    providerArns: ['placeholder'] // TODO - construct user pool
+    providerArns: ['arn:aws:cognito-idp:us-east-1:026810594887:userpool/us-east-1_NNDzc6RVP'] // TODO - remove hardcoded value
 })
 const Lambdas = Code.fromAsset('./dist/src/federal/infrastructure/lambdas')
-const Helper = new LambdaHelper(stack, ExecutionerRole, {}, Lambdas)
+const Helper = new LambdaHelper(stack, ExecutionerRole, EnvironmentVariables, Lambdas)
 const ApiUtil = new ApiHelper(Helper, CognitoAuthorizer, "social-freedom.com")
 
 ApiUtil.constructLambdaApi(Api.root, 'register', 'POST', 'account-registration')
-
-const IdentityToAccountTable = new Table(stack, "IdentityToAccount", {
-    partitionKey: {
-        name: "cognitoIdentityId",
-        type: AttributeType.STRING
-    },
-    tableName: "IdentityToAccount"
-});
-
-ExecutionerRole.addToPolicy(new PolicyStatement({
-    resources: [IdentityToAccountTable.tableArn],
-    actions: ['dynamodb:putItem']
-}));
 
 app.synth()

@@ -4,8 +4,13 @@ import * as AWS from "aws-sdk";
 import {AWSError} from "aws-sdk";
 import {APIGatewayEvent} from "aws-lambda";
 import * as http from "http";
-import {Profile} from "../../../../shared/account-types";
-import {AccountDetailsIsPublicKey, FollowersTablePartitionKey, FollowingTablePartitionKey} from "./constants";
+import {AccountDetails, Profile} from "../../../../shared/account-types";
+import {
+    AccountDetailsFollowersKey,
+    AccountDetailsFollowingKey,
+    AccountDetailsIsPublicKey,
+    AuthTokenHeaderName
+} from "./constants";
 
 // TODO - unit testing
 
@@ -43,43 +48,29 @@ export async function getProfile(): Promise<Profile> {
 }
 
 export async function isFollowerIdentity(cognitoIdentityId: string): Promise<boolean> {
-    const followerEntry = await new AWS.DynamoDB().getItem({
-        TableName: process.env.FOLLOWERS_TABLE,
-        Key: {
-            key: {S: FollowersTablePartitionKey},
-            cognitoIdentityId: {S: cognitoIdentityId}
+    const queryResult = await new AWS.DynamoDB().query({
+        TableName: process.env.TRACKED_ACCOUNTS_TABLE,
+        IndexName: 'AccountsByIdentityId',
+        KeyConditionExpression: "#cognitoIdentityId = :cognitoIdentityId",
+        ExpressionAttributeNames: {
+            "#cognitoIdentityId": "cognitoIdentityId"
+        },
+        ExpressionAttributeValues: {
+            ":cognitoIdentityId": {S: cognitoIdentityId}
         }
     }).promise()
 
-    return !!followerEntry.Item
+    if (queryResult.Count === 0) return false
+
+    return await isFollower(queryResult.Items[0]["userId"].S)
 }
 
 export async function isFollower(userId: string): Promise<boolean> {
-    const queryResult = await new AWS.DynamoDB().query({
-        IndexName: 'FollowersByUserId',
-        TableName: process.env.FOLLOWERS_TABLE,
-        KeyConditionExpression: "#userId = :userId",
-        ExpressionAttributeNames: {
-            "#userId": "userId"
-        },
-        ExpressionAttributeValues: {
-            ":userId": {S: userId}
-        }
-    }).promise()
-
-    return queryResult.Count !== 0
+    return await dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, userId)
 }
 
 export async function isFollowing(userId: string): Promise<boolean> {
-    const followingEntry = await new AWS.DynamoDB().getItem({
-        TableName: process.env.FOLLOWING_TABLE,
-        Key: {
-            key: {S: FollowingTablePartitionKey},
-            userId: {S: userId}
-        }
-    }).promise()
-
-    return !!followingEntry.Item
+    return await dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, userId)
 }
 
 export async function apiRequest(hostname: string, path: string, authToken: string,
@@ -122,4 +113,102 @@ export async function apiRequest(hostname: string, path: string, authToken: stri
         req.write(requestBodyString);
     }
     req.end();
+}
+
+export async function getTrackedAccountDetails(userId: string):Promise<AccountDetails> {
+    const requesterDetailsItem = (await new AWS.DynamoDB().getItem({
+        TableName: process.env.TRACKED_ACCOUNTS_TABLE,
+        Key: {
+            userId: {S: userId}
+        }
+    }).promise()).Item
+
+    if (!!requesterDetailsItem) {
+        return {
+            identifiers: {
+                accountId: requesterDetailsItem["identifiers"].M["accountId"].S,
+                region: requesterDetailsItem["identifiers"].M["region"].S,
+                apiDomainName: requesterDetailsItem["identifiers"].M["apiDomainName"].S,
+            },
+            profile: JSON.parse(requesterDetailsItem["profile"].S)
+        }
+    } else {
+        return undefined
+    }
+}
+
+export async function addToDynamoSet(tableName: string, attributeKey: string, value: string) {
+    return await new AWS.DynamoDB().updateItem({
+        TableName: tableName,
+        Key: {
+            key: {S: attributeKey}
+        },
+        UpdateExpression: 'ADD #value :add_value)',
+        ExpressionAttributeNames: {
+            '#value': 'value'
+        },
+        ExpressionAttributeValues: {
+            ':add_value': {SS: [value]}
+        }
+    }).promise()
+}
+
+export async function removeFromDynamoSet(tableName: string, attributeKey: string, value: string) {
+    return await new AWS.DynamoDB().updateItem({
+        TableName: tableName,
+        Key: {
+            key: {S: attributeKey}
+        },
+        UpdateExpression: 'DELETE #value :delete_value)',
+        ExpressionAttributeNames: {
+            '#value': 'value'
+        },
+        ExpressionAttributeValues: {
+            ':delete_value': {SS: [value]}
+        }
+    }).promise()
+}
+
+export async function dynamoSetContains(tableName: string, attributeKey: string, value: string): Promise<boolean> {
+    const setResult = await new AWS.DynamoDB().getItem({
+        TableName: tableName,
+        Key: {
+            key: {S: attributeKey}
+        }
+    }).promise()
+
+    return !!setResult.Item && !!setResult.Item["value"] && !!setResult.Item["value"].SS
+        && setResult.Item["value"].SS.includes(value)
+}
+
+export function getAuthToken(event:APIGatewayEvent) {
+    return event.headers[AuthTokenHeaderName]
+}
+
+export async function getThisAccountDetails() {
+    return {
+        identifiers: {
+            accountId: process.env.ACCOUNT_ID,
+            region: process.env.REGION,
+            apiDomainName: process.env.API_DOMAIN_NAME
+        },
+        profile: await getProfile()
+    }
+}
+
+export async function putTrackedAccountDetails(accountDetails: AccountDetails) {
+    await new AWS.DynamoDB().putItem({
+        TableName: process.env.TRACKED_ACCOUNTS_TABLE,
+        Item: {
+            userId: {S: accountDetails.userId},
+            identifiers: {
+                M: {
+                    accountId: {S: accountDetails.identifiers.accountId},
+                    region: {S: accountDetails.identifiers.region},
+                    apiDomainName: {S: accountDetails.identifiers.apiDomainName},
+                }
+            },
+            profile: {S: JSON.stringify(accountDetails.profile)}
+        }
+    }).promise()
 }

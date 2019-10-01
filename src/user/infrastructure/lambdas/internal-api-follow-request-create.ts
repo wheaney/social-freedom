@@ -1,10 +1,18 @@
-import {internalAPIIdentityCheck} from "./shared/util";
+import * as Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
+import {FollowRequest} from "./shared/follow-request-types";
+import {AccountDetails} from "../../../shared/account-types";
+import {AccountDetailsOutgoingFollowRequestsKey} from "./shared/constants";
 
 export const handler = async (event:APIGatewayEvent) => {
-    internalAPIIdentityCheck(event)
+    Util.internalAPIIdentityCheck(event)
 
-    // TODO - add entry to Following table with pending flag
+    await internalFollowRequestCreate(Util.getAuthToken(event), JSON.parse(event.body))
+}
 
-    // TODO - call follower-api-follow-request-create API on account we're requesting to
+export const internalFollowRequestCreate = async (cognitoAuthToken: string, request: FollowRequest, thisAccountDetails?: AccountDetails) => {
+    await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, request.userId)
+
+    await Util.apiRequest(request.identifiers.apiDomainName, '/follower/follow-request-create',
+        cognitoAuthToken, 'POST', thisAccountDetails || await Util.getThisAccountDetails())
 }

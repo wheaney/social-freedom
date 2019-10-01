@@ -1,136 +1,86 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
-import {AttributeValueList, UpdateItemInput} from "aws-sdk/clients/dynamodb";
 import {followRequestCreate} from "../../../../src/user/infrastructure/lambdas/follower-api-follow-request-create"
-import {AccountDetailsFollowRequestsKey} from "../../../../src/user/infrastructure/lambdas/shared/constants";
-import * as InternalFollowRequestRespond from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
+import {AccountDetailsIncomingFollowRequestsKey} from "../../../../src/user/infrastructure/lambdas/shared/constants";
+import * as InternalFollowRequestRespond
+    from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
 import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
+import {SubscribeInput} from "aws-sdk/clients/sns";
+import {FollowRequest} from "../../../../src/user/infrastructure/lambdas/shared/follow-request-types";
+import {setupEnvironmentVariables} from "./test-utils";
 
-jest.mock('uuid', () => ({
-    v1: () => {
-        return "someUUID"
-    }
-}))
 const mockedRequestRespond = jest.fn() as jest.MockedFunction<typeof InternalFollowRequestRespond.internalFollowRequestRespond>
 jest.spyOn(InternalFollowRequestRespond, 'internalFollowRequestRespond').mockImplementation(mockedRequestRespond)
 
-const mockedIsPublic = jest.fn() as jest.MockedFunction<typeof Util.isAccountPublic>
-jest.spyOn(Util, 'isAccountPublic').mockImplementation(mockedIsPublic)
+jest.mock("../../../../src/user/infrastructure/lambdas/shared/util")
+const mockedUtil = Util as jest.Mocked<typeof Util>
 
-jest.spyOn(global.Date, 'now').mockImplementation(() => 1234567890)
-
-const ExpectedUpdateItemParams = {
-    TableName: "AccountDetails",
-    Key: {
-        key: {S: AccountDetailsFollowRequestsKey}
+const Request: FollowRequest = {
+    userId: "followingUserId",
+    identifiers: {
+        accountId: "followingAccountId",
+        region: "followingRegion",
+        apiDomainName: "apiDomainName"
     },
-    UpdateExpression: `SET #value = list_append(if_not_exists(#value, :empty_list), :append_value) ADD #version :version_inc`,
-    ExpressionAttributeNames: {
-        '#value': 'value',
-        '#version': 'version'
-    },
-    ExpressionAttributeValues: {
-        ':empty_list': {L: [] as AttributeValueList},
-        ':append_value': {
-            L: [{
-                M: {
-                    id: {S: "someUUID"},
-                    identifiers: {
-                        M: {
-                            cognitoIdentityId: {S: "cognitoIdentityId"},
-                            accountId: {S: "followingAccountId"},
-                            region: {S: "followingRegion"},
-                            userId: {S: "followingUserId"},
-                            apiDomainName: {S: "apiDomainName"},
-                            creationDate: {N: "1234567890"}
-                        }
-                    },
-                    profile: {S: "{\"name\":\"Wayne Heaney\",\"photoUrl\":\"somePhotoUrl\"}"}
-                }
-            }]
-        },
-        ':version_inc': {N: "1"}
+    profile: {
+        name: "Wayne Heaney",
+        photoUrl: "somePhotoUrl"
     }
 }
 
 async function invokeHandler() {
-    return await followRequestCreate("authToken", {
-        identifiers: {
-            cognitoIdentityId: "cognitoIdentityId",
-            accountId: "followingAccountId",
-            region: "followingRegion",
-            userId: "followingUserId",
-            apiDomainName: "apiDomainName"
-        },
-        profile: {
-            name: "Wayne Heaney",
-            photoUrl: "somePhotoUrl"
-        }
-    })
+    return await followRequestCreate("authToken", Request)
 }
 
 beforeAll(async (done) => {
-    process.env = {
-        USER_ID: "someUserId",
-        REGION: "us-west-1",
-        ACCOUNT_ID: "12345",
-        ACCOUNT_DETAILS_TABLE: "AccountDetails",
-        API_DOMAIN_NAME: "myApiDomain.com"
-    }
+    setupEnvironmentVariables()
     done();
 });
 
 beforeEach(async (done) => {
+    jest.clearAllMocks()
     AWSMock.setSDKInstance(AWS);
     done()
 });
 
 afterEach(async (done) => {
-    AWSMock.restore('DynamoDB');
+    AWSMock.restore('SNS');
     done()
 })
 
 describe("the FollowRequestReceived handler", () => {
-    it("should succeed when getItem and updateItem succeed", async () => {
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedUpdateItemParams)
+    it("should store request, subscribe to profile updates, and store initial account details", async () => {
+        AWSMock.mock('SNS', 'subscribe', (params: SubscribeInput, callback: Function) => {
+            expect(params).toStrictEqual({
+                TopicArn: 'arn:aws:sns:followingRegion:followingAccountId:ProfileUpdates-followingUserId',
+                Endpoint: 'profileUpdateHandlerArn',
+                Protocol: 'lambda'
+            })
 
             callback(null, {});
         })
-        mockedIsPublic.mockResolvedValue(Promise.resolve(false))
+        mockedUtil.isAccountPublic.mockResolvedValue(Promise.resolve(false))
 
         await invokeHandler()
 
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'followingUserId')
+        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalledWith(Request)
         expect(mockedRequestRespond).not.toHaveBeenCalled()
     });
 
     it("should auto-approve if the account is public", async () => {
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedUpdateItemParams)
-
+        AWSMock.mock('SNS', 'subscribe', (params: SubscribeInput, callback: Function) => {
             callback(null, {});
         })
-        mockedIsPublic.mockResolvedValue(Promise.resolve(true))
+        mockedUtil.isAccountPublic.mockResolvedValue(Promise.resolve(true))
 
         await invokeHandler()
 
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalled()
+        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalled()
         expect(mockedRequestRespond).toHaveBeenCalledWith("authToken", {
-            requestId: "someUUID",
+            userId: "followingUserId",
             accepted: true
         })
-    });
-
-    it("should fail when updateItem fails", async () => {
-        AWSMock.mock('DynamoDB', 'updateItem', (params: UpdateItemInput, callback: Function) => {
-            expect(params).toStrictEqual(ExpectedUpdateItemParams)
-
-            callback("updateItem failed!");
-        })
-
-        try {
-            await invokeHandler()
-        } catch (e) {
-            expect(e).toEqual("updateItem failed!")
-        }
     });
 });

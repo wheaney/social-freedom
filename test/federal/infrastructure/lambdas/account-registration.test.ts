@@ -3,13 +3,10 @@ import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
 import {doHandle as handler} from "../../../../src/federal/infrastructure/lambdas/account-registration"
 
-jest.mock('uuid', () => ({
-    v1: () => {
-        return "someUUID"
-    }
-}))
-
 beforeAll(async (done) => {
+    process.env = {
+        ACCOUNTS_TABLE: "Accounts"
+    }
     done();
 });
 
@@ -18,20 +15,18 @@ describe("the AccountRegistration handler", () => {
         AWSMock.setSDKInstance(AWS);
         AWSMock.mock('DynamoDB', 'putItem', (params: PutItemInput, callback: Function) => {
             expect(params).toStrictEqual({
-                TableName: 'IdentityToAccount',
+                TableName: 'Accounts',
                 Item: {
-                    "cognitoIdentityId": {S: "cognitoIdentityId"},
+                    "userId": {S: "userId"},
                     "accountId": {S: "accountId"},
-                    "region": {S: "region"},
-                    "userId": {S: "someUUID"}
+                    "region": {S: "region"}
                 }
             })
 
             callback(null, {});
         })
 
-        await handler({
-            cognitoIdentityId: "cognitoIdentityId",
+        await handler("userId", {
             accountId: "accountId",
             region: "region"
         })
@@ -43,12 +38,11 @@ describe("the AccountRegistration handler", () => {
         AWSMock.setSDKInstance(AWS);
         AWSMock.mock('DynamoDB', 'putItem', (params: PutItemInput, callback: Function) => {
             expect(params).toStrictEqual({
-                TableName: 'IdentityToAccount',
+                TableName: 'Accounts',
                 Item: {
-                    "cognitoIdentityId": {S: "cognitoIdentityId"},
+                    "userId": {S: "userId"},
                     "accountId": {S: "accountId"},
-                    "region": {S: "region"},
-                    "userId": {S: "someUUID"}
+                    "region": {S: "region"}
                 }
             })
 
@@ -56,8 +50,7 @@ describe("the AccountRegistration handler", () => {
         })
 
         try {
-            await handler({
-                cognitoIdentityId: "cognitoIdentityId",
+            await handler("userId", {
                 accountId: "accountId",
                 region: "region"
             })

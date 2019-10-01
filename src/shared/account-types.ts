@@ -7,18 +7,17 @@ export type Profile = {
 }
 
 export type BasicAccountIdentifiers = {
-    cognitoIdentityId: string
     accountId: string,
     region: string
 }
 export type AccountRegistrationEvent = BasicAccountIdentifiers
 
 export type AccountIdentifiers = BasicAccountIdentifiers & {
-    userId: string,
     apiDomainName: string,
 }
 
 export type AccountDetails = {
+    userId?: string,
     identifiers: AccountIdentifiers,
     profile: Profile
 }
