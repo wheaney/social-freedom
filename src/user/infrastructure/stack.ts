@@ -1,5 +1,5 @@
 import * as cdk from "@aws-cdk/core";
-import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal, AnyPrincipal} from "@aws-cdk/aws-iam";
+import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal, AnyPrincipal, ManagedPolicy} from "@aws-cdk/aws-iam";
 import {AttributeType, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
@@ -82,17 +82,16 @@ export class UserStack extends cdk.Stack {
 
         // TODO - move role creation into Lambda helper, lock down function roles to only permit what's necessary
         ExecutionerRole.addToPolicy(new PolicyStatement({
-            resources: [PostsTable.tableArn],
-            actions: ['dynamodb:PutItem']
-        }));
-        ExecutionerRole.addToPolicy(new PolicyStatement({
-            resources: [AccountDetailsTable.tableArn],
-            actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem']
+            resources: [PostsTable.tableArn, PostActivitiesTable.tableArn, FeedTable.tableArn, TrackedAccounts.tableArn, AccountDetailsTable.tableArn],
+            actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem']
         }));
         ExecutionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTopic.topicArn, ProfileUpdatesTopic.topicArn],
             actions: ['sns:Publish']
         }));
+
+        // TODO - maybe we only add this in dev? or do something to expire CloudWatch logs?
+        ExecutionerRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'))
 
         const Api = new RestApi(this, "API", {
             endpointTypes: [EndpointType.EDGE]
@@ -117,7 +116,8 @@ export class UserStack extends cdk.Stack {
             TRACKED_ACCOUNTS_TABLE: TrackedAccounts.tableName,
             MEDIA_BUCKET: MediaBucket.bucketName,
             CDN_DOMAIN_NAME: WebDistribution.domainName,
-            API_DOMAIN_NAME: Api.domainName
+            API_DOMAIN_NAME: Api.domainName,
+            CORS_ALLOW_ORIGIN: federalApiDomainName
         }
 
         const LambdaCode = Code.fromAsset('./dist/src/user/infrastructure/lambdas')

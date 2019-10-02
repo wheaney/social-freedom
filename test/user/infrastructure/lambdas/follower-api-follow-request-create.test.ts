@@ -6,8 +6,7 @@ import * as InternalFollowRequestRespond
     from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
 import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
 import {SubscribeInput} from "aws-sdk/clients/sns";
-import {FollowRequest} from "../../../../src/user/infrastructure/lambdas/shared/follow-request-types";
-import {setupEnvironmentVariables} from "./test-utils";
+import {FollowingAccountDetails, setupEnvironmentVariables} from "./test-utils";
 
 const mockedRequestRespond = jest.fn() as jest.MockedFunction<typeof InternalFollowRequestRespond.internalFollowRequestRespond>
 jest.spyOn(InternalFollowRequestRespond, 'internalFollowRequestRespond').mockImplementation(mockedRequestRespond)
@@ -15,21 +14,8 @@ jest.spyOn(InternalFollowRequestRespond, 'internalFollowRequestRespond').mockImp
 jest.mock("../../../../src/user/infrastructure/lambdas/shared/util")
 const mockedUtil = Util as jest.Mocked<typeof Util>
 
-const Request: FollowRequest = {
-    userId: "followingUserId",
-    identifiers: {
-        accountId: "followingAccountId",
-        region: "followingRegion",
-        apiDomainName: "apiDomainName"
-    },
-    profile: {
-        name: "Wayne Heaney",
-        photoUrl: "somePhotoUrl"
-    }
-}
-
 async function invokeHandler() {
-    return await followRequestCreate("authToken", Request)
+    return await followRequestCreate("authToken", FollowingAccountDetails)
 }
 
 beforeAll(async (done) => {
@@ -64,7 +50,7 @@ describe("the FollowRequestReceived handler", () => {
         await invokeHandler()
 
         expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'followingUserId')
-        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalledWith(Request)
+        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalledWith(FollowingAccountDetails)
         expect(mockedRequestRespond).not.toHaveBeenCalled()
     });
 

@@ -5,13 +5,13 @@ import {internalFollowRequestRespond} from './internal-api-follow-request-respon
 import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
 import * as AWS from "aws-sdk";
 
-export const handler = async (event: APIGatewayEvent): Promise<void> => {
-    await Util.followerAPIIdentityCheck(event)
-
-    return await followRequestCreate(Util.getAuthToken(event), {
-        userId: event.requestContext.identity.cognitoIdentityId,
-        ...JSON.parse(event.body)
+export const handler = async (event: APIGatewayEvent): Promise<any> => {
+    await followRequestCreate(Util.getAuthToken(event), {
+        ...JSON.parse(event.body),
+        userId: Util.getUserId(event)
     })
+
+    return Util.apiGatewayLambdaResponse()
 };
 
 // visible for testing

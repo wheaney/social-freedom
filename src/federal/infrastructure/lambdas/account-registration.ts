@@ -3,7 +3,13 @@ import {AccountRegistrationEvent} from "../../../shared/account-types";
 import {APIGatewayEvent} from "aws-lambda";
 
 export const handler = async (event:APIGatewayEvent) => {
-    return await doHandle(event.requestContext.identity.cognitoIdentityId, JSON.parse(event.body))
+    await doHandle(event.requestContext.authorizer.claims.sub, JSON.parse(event.body))
+
+    return {
+        statusCode: "200",
+        body: '',
+        isBase64Encoded: false
+    }
 };
 
 // visible for testing

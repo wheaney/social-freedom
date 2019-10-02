@@ -16,16 +16,27 @@ import {
 
 export function internalAPIIdentityCheck(event: APIGatewayEvent): void {
     if (!event || !event.requestContext || !event.requestContext.identity ||
-        process.env.COGNITO_IDENTITY_ID !== event.requestContext.identity.cognitoIdentityId) {
+        process.env.COGNITO_IDENTITY_ID !== getUserId(event)) {
         throw new Error('Unauthorized identity')
     }
 }
 
 export async function followerAPIIdentityCheck(event: APIGatewayEvent): Promise<void> {
     if (!event || !event.requestContext || !event.requestContext.identity ||
-        (!await isFollowerIdentity(event.requestContext.identity.cognitoIdentityId) &&
-            process.env.COGNITO_IDENTITY_ID !== event.requestContext.identity.cognitoIdentityId)) {
+        (!await isFollowerIdentity(getUserId(event)) &&
+            process.env.COGNITO_IDENTITY_ID !== getUserId(event))) {
         throw new Error('Unauthorized identity')
+    }
+}
+
+export function apiGatewayLambdaResponse(httpStatus: number = 200, responseBody?: any) {
+    return {
+        statusCode: httpStatus.toString(),
+        body: responseBody ? JSON.stringify(responseBody) : '',
+        isBase64Encoded: false,
+        headers: {
+            'Access-Control-Allow-Origin': process.env.CORS_ALLOW_ORIGIN
+        }
     }
 }
 
@@ -83,7 +94,7 @@ export async function apiRequest(hostname: string, path: string, authToken: stri
     }
     const req = http.request({
         hostname: hostname,
-        path: path,
+        path: `/prod${path}`,
         method: requestMethod,
         headers: {
             Authorization: authToken,
@@ -143,7 +154,7 @@ export async function addToDynamoSet(tableName: string, attributeKey: string, va
         Key: {
             key: {S: attributeKey}
         },
-        UpdateExpression: 'ADD #value :add_value)',
+        UpdateExpression: 'ADD #value :add_value',
         ExpressionAttributeNames: {
             '#value': 'value'
         },
@@ -159,7 +170,7 @@ export async function removeFromDynamoSet(tableName: string, attributeKey: strin
         Key: {
             key: {S: attributeKey}
         },
-        UpdateExpression: 'DELETE #value :delete_value)',
+        UpdateExpression: 'DELETE #value :delete_value',
         ExpressionAttributeNames: {
             '#value': 'value'
         },
@@ -183,6 +194,10 @@ export async function dynamoSetContains(tableName: string, attributeKey: string,
 
 export function getAuthToken(event:APIGatewayEvent) {
     return event.headers[AuthTokenHeaderName]
+}
+
+export function getUserId(event:APIGatewayEvent) {
+    return event.requestContext.authorizer.claims.sub
 }
 
 export async function getThisAccountDetails() {

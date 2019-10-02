@@ -8,6 +8,8 @@ export const handler = async (event:APIGatewayEvent) => {
     Util.internalAPIIdentityCheck(event)
 
     await internalFollowRequestCreate(Util.getAuthToken(event), JSON.parse(event.body))
+
+    return Util.apiGatewayLambdaResponse()
 }
 
 export const internalFollowRequestCreate = async (cognitoAuthToken: string, request: FollowRequest, thisAccountDetails?: AccountDetails) => {
