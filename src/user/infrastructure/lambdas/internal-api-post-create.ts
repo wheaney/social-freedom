@@ -1,6 +1,6 @@
 import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
-import * as Util from "./shared/util";
+import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostCreateEvent} from "./shared/post-types";
 import {PostsTablePartitionKey} from "./shared/constants";

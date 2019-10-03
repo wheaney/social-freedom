@@ -1,4 +1,4 @@
-import * as Util from "./shared/util";
+import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {FollowRequest} from "./shared/follow-request-types";
 import {internalFollowRequestRespond} from './internal-api-follow-request-respond'

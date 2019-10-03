@@ -4,7 +4,7 @@ import {followRequestCreate} from "../../../../src/user/infrastructure/lambdas/f
 import {AccountDetailsIncomingFollowRequestsKey} from "../../../../src/user/infrastructure/lambdas/shared/constants";
 import * as InternalFollowRequestRespond
     from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
-import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
+import Util from "../../../../src/user/infrastructure/lambdas/shared/util";
 import {FollowingAccountDetails, setupEnvironmentVariables} from "./test-utils";
 
 const mockedRequestRespond = jest.fn() as jest.MockedFunction<typeof InternalFollowRequestRespond.internalFollowRequestRespond>

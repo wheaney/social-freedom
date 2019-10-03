@@ -1,4 +1,4 @@
-import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
+import Util from "../../../../src/user/infrastructure/lambdas/shared/util";
 import {internalFollowRequestCreate} from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-create";
 import {FollowingAccountDetails, setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
 import {AccountDetailsOutgoingFollowRequestsKey} from "../../../../src/user/infrastructure/lambdas/shared/constants";

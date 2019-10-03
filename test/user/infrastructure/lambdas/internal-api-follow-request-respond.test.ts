@@ -1,6 +1,6 @@
 import * as InternalFollowRequestCreate
     from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-create";
-import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
+import Util from "../../../../src/user/infrastructure/lambdas/shared/util";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsIncomingFollowRequestsKey

@@ -1,5 +1,5 @@
 import {APIGatewayEvent} from "aws-lambda";
-import * as Util from "./shared/util";
+import Util from "./shared/util";
 import {InternalFollowResponse} from "./shared/follow-request-types";
 import {AccountDetailsFollowersKey, AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
 import {internalFollowRequestCreate} from "./internal-api-follow-request-create";

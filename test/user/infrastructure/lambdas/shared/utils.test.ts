@@ -1,6 +1,6 @@
 import * as AWSMock from "aws-sdk-mock";
 import {SubscribeInput} from "aws-sdk/clients/sns";
-import * as Util from "../../../../../src/user/infrastructure/lambdas/shared/util";
+import Util from "../../../../../src/user/infrastructure/lambdas/shared/util";
 import {FollowingAccountDetails, setupEnvironmentVariables} from "../test-utils";
 import * as AWS from "aws-sdk";
 
@@ -36,25 +36,25 @@ describe("the subscribeToProfileUpdates function", () => {
     })
 })
 
-// describe("the getThisAccountDetails function", () => {
-//     it("should return account details for this account", async () => {
-//         const mockedGetProfile = jest.spyOn(Util, 'getProfile')
-//         mockedGetProfile.mockResolvedValue(FollowingAccountDetails.profile)
-//
-//         const thisAccountDetails = await Util.getThisAccountDetails()
-//         expect(thisAccountDetails).toStrictEqual({
-//             userId: "someUserId",
-//             identifiers: {
-//                 accountId: "12345",
-//                 region: "us-west-1",
-//                 apiDomainName: "myApiDomain.com"
-//             },
-//             profile: {
-//                 name: "Following User",
-//                 photoUrl: "followingUserPhoto"
-//             }
-//         })
-//
-//         expect(mockedGetProfile).toHaveBeenCalled()
-//     })
-// })
+describe("the getThisAccountDetails function", () => {
+    it("should return account details for this account", async () => {
+        const mockedGetProfile = jest.spyOn(Util, 'getProfile')
+        mockedGetProfile.mockResolvedValue(FollowingAccountDetails.profile)
+
+        const thisAccountDetails = await Util.getThisAccountDetails()
+        expect(thisAccountDetails).toStrictEqual({
+            userId: "someUserId",
+            identifiers: {
+                accountId: "12345",
+                region: "us-west-1",
+                apiDomainName: "myApiDomain.com"
+            },
+            profile: {
+                name: "Following User",
+                photoUrl: "followingUserPhoto"
+            }
+        })
+
+        expect(mockedGetProfile).toHaveBeenCalled()
+    })
+})

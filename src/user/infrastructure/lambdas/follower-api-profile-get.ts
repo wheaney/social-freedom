@@ -1,4 +1,4 @@
-import * as Util from "./shared/util";
+import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 
 export const handler = async (event: APIGatewayEvent) => {
