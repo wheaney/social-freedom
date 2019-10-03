@@ -5,11 +5,11 @@ import {AccountDetailsFollowersKey, AccountDetailsIncomingFollowRequestsKey} fro
 import {internalFollowRequestCreate} from "./internal-api-follow-request-create";
 
 export const handler = async (event: APIGatewayEvent) => {
-    Util.internalAPIIdentityCheck(event)
+    return await Util.apiGatewayProxyWrapper(async () => {
+        Util.internalAPIIdentityCheck(event)
 
-    await internalFollowRequestRespond(Util.getAuthToken(event), JSON.parse(event.body))
-
-    return Util.apiGatewayLambdaResponse()
+        await internalFollowRequestRespond(Util.getAuthToken(event), JSON.parse(event.body))
+    })
 };
 
 export const internalFollowRequestRespond = async (cognitoAuthToken: string, response: InternalFollowResponse) => {
@@ -23,6 +23,7 @@ export const internalFollowRequestRespond = async (cognitoAuthToken: string, res
         if (response.accepted) {
             await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, response.userId)
 
+            // TODO - limit this to just visible fields
             followerApiResponsePayload['accountDetails'] = await Util.getThisAccountDetails()
         } else {
             // TODO - unsubscribe from SNS topic

@@ -31,7 +31,6 @@ export function setupEnvironmentVariables() {
         USER_ID: "someUserId",
         REGION: "us-west-1",
         ACCOUNT_ID: "12345",
-        COGNITO_IDENTITY_ID: "myIdentityId",
         ACCOUNT_DETAILS_TABLE: "AccountDetails",
         ACCOUNTS_TABLE: "Accounts",
         POSTS_TABLE: "PostsTableName",

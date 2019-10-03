@@ -5,7 +5,6 @@ import {AccountDetailsIncomingFollowRequestsKey} from "../../../../src/user/infr
 import * as InternalFollowRequestRespond
     from "../../../../src/user/infrastructure/lambdas/internal-api-follow-request-respond";
 import * as Util from "../../../../src/user/infrastructure/lambdas/shared/util";
-import {SubscribeInput} from "aws-sdk/clients/sns";
 import {FollowingAccountDetails, setupEnvironmentVariables} from "./test-utils";
 
 const mockedRequestRespond = jest.fn() as jest.MockedFunction<typeof InternalFollowRequestRespond.internalFollowRequestRespond>
@@ -34,35 +33,25 @@ afterEach(async (done) => {
     done()
 })
 
-describe("the FollowRequestReceived handler", () => {
+describe("the FollowRequestCreate handler", () => {
     it("should store request, subscribe to profile updates, and store initial account details", async () => {
-        AWSMock.mock('SNS', 'subscribe', (params: SubscribeInput, callback: Function) => {
-            expect(params).toStrictEqual({
-                TopicArn: 'arn:aws:sns:followingRegion:followingAccountId:ProfileUpdates-followingUserId',
-                Endpoint: 'profileUpdateHandlerArn',
-                Protocol: 'lambda'
-            })
-
-            callback(null, {});
-        })
         mockedUtil.isAccountPublic.mockResolvedValue(Promise.resolve(false))
 
         await invokeHandler()
 
         expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'followingUserId')
+        expect(mockedUtil.subscribeToProfileUpdates).toHaveBeenCalledWith(FollowingAccountDetails)
         expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalledWith(FollowingAccountDetails)
         expect(mockedRequestRespond).not.toHaveBeenCalled()
     });
 
     it("should auto-approve if the account is public", async () => {
-        AWSMock.mock('SNS', 'subscribe', (params: SubscribeInput, callback: Function) => {
-            callback(null, {});
-        })
         mockedUtil.isAccountPublic.mockResolvedValue(Promise.resolve(true))
 
         await invokeHandler()
 
         expect(mockedUtil.addToDynamoSet).toHaveBeenCalled()
+        expect(mockedUtil.subscribeToProfileUpdates).toHaveBeenCalled()
         expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalled()
         expect(mockedRequestRespond).toHaveBeenCalledWith("authToken", {
             userId: "followingUserId",

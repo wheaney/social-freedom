@@ -14,6 +14,15 @@ import {
 
 // TODO - unit testing
 
+export async function apiGatewayProxyWrapper(proxyFunction: () => Promise<any>) {
+    try {
+        return apiGatewayLambdaResponse(200, await proxyFunction())
+    } catch (err) {
+        console.error(err)
+        return apiGatewayLambdaResponse(500)
+    }
+}
+
 export function internalAPIIdentityCheck(event: APIGatewayEvent): void {
     if (!event || !event.requestContext || !event.requestContext.identity ||
         process.env.COGNITO_IDENTITY_ID !== getUserId(event)) {
@@ -200,8 +209,9 @@ export function getUserId(event:APIGatewayEvent) {
     return event.requestContext.authorizer.claims.sub
 }
 
-export async function getThisAccountDetails() {
+export async function getThisAccountDetails():Promise<AccountDetails> {
     return {
+        userId: process.env.USER_ID,
         identifiers: {
             accountId: process.env.ACCOUNT_ID,
             region: process.env.REGION,
@@ -225,5 +235,13 @@ export async function putTrackedAccountDetails(accountDetails: AccountDetails) {
             },
             profile: {S: JSON.stringify(accountDetails.profile)}
         }
+    }).promise()
+}
+
+export async function subscribeToProfileUpdates(account:AccountDetails) {
+    return await new AWS.SNS().subscribe({
+        TopicArn: `arn:aws:sns:${account.identifiers.region}:${account.identifiers.accountId}:ProfileUpdates-${account.userId}`,
+        Endpoint: process.env.PROFILE_UPDATE_HANDLER,
+        Protocol: 'lambda'
     }).promise()
 }

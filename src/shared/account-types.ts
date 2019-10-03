@@ -22,10 +22,12 @@ export type AccountDetails = {
     profile: Profile
 }
 
+type PublicSearchField = "name" | "phone" | "email"
+type VisibleField = "phone" | "email" | "birthday"
 export type AccountPreferences = {
     isPublic: boolean,
-    publicSearchFields: "name" | "phone" | "email",
-    visibleFields: "phone" | "email" | "birthday",
+    publicSearchFields: PublicSearchField[],
+    visibleFields: VisibleField[],
     allowExternalPosts: boolean,
     allowExternalTags: boolean
 }

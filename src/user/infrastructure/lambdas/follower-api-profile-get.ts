@@ -1,10 +1,10 @@
-import {followerAPIIdentityCheck} from "./shared/util";
+import * as Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 
 export const handler = async (event: APIGatewayEvent) => {
-    await followerAPIIdentityCheck(event)
+    await Util.apiGatewayProxyWrapper(async () => {
+        await Util.followerAPIIdentityCheck(event)
 
-    return {
-        status: 200
-    }
+        return await Util.getProfile()
+    })
 }

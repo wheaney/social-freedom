@@ -1,6 +1,14 @@
 import * as cdk from "@aws-cdk/core";
-import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal, AnyPrincipal, ManagedPolicy} from "@aws-cdk/aws-iam";
-import {AttributeType, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
+import {Duration, RemovalPolicy} from "@aws-cdk/core";
+import {
+    AnyPrincipal,
+    CanonicalUserPrincipal,
+    ManagedPolicy,
+    PolicyStatement,
+    Role,
+    ServicePrincipal
+} from "@aws-cdk/aws-iam";
+import {AttributeType, BillingMode, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
 import {Topic} from "@aws-cdk/aws-sns";
@@ -9,13 +17,16 @@ import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/
 import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
 import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 import {ApiHelper, LambdaHelper} from "../../shared/infrastructure-utils";
-import {Duration} from "@aws-cdk/core";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
+    readonly removalPolicy: RemovalPolicy;
 
-    constructor(app: cdk.App, federalApiDomainName: string, userId: string, userPoolArn: string, authUserArn: string) {
+    constructor(app: cdk.App, production: boolean, federalApiDomainName: string, userId: string, userPoolArn: string) {
         super(app, `UserStack-${userId}`);
+
+        // don't want accounts to lose all their data if CloudFormation attempts to revert/remove resources
+        this.removalPolicy = production ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
 
         this.userId = userId;
 
@@ -28,14 +39,18 @@ export class UserStack extends cdk.Stack {
             partitionKey: {
                 name: "key",
                 type: AttributeType.STRING
-            }
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST,
+            removalPolicy: this.removalPolicy
         })
 
         const TrackedAccounts = new Table(this, "TrackedAccounts", {
             partitionKey: {
                 name: "userId",
                 type: AttributeType.STRING
-            }
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST,
+            removalPolicy: this.removalPolicy
         });
         const FeedTable = this.buildSortTable("Feed", "key")
         const PostsTable = this.buildSortTable("Posts", "key")
@@ -58,7 +73,9 @@ export class UserStack extends cdk.Stack {
             resources: [PostsTopic.topicArn]
         }))
 
-        const MediaBucket = new Bucket(this, "MediaBucket")
+        const MediaBucket = new Bucket(this, "MediaBucket", {
+            removalPolicy: this.removalPolicy
+        })
 
         const OriginAccessIdentity = new CfnCloudFrontOriginAccessIdentity(this, "CloudFrontOriginAccessIdentity", {
             cloudFrontOriginAccessIdentityConfig: {
@@ -157,7 +174,9 @@ export class UserStack extends cdk.Stack {
             sortKey: {
                 name: sortKey,
                 type: AttributeType.STRING
-            }
+            },
+            billingMode: BillingMode.PAY_PER_REQUEST,
+            removalPolicy: this.removalPolicy
         });
 
         if (createTimestampIndex) {
@@ -179,7 +198,8 @@ export class UserStack extends cdk.Stack {
             accessControl: BucketAccessControl.BUCKET_OWNER_FULL_CONTROL,
             lifecycleRules: [{
                 expiration: Duration.days(7)
-            }]
+            }],
+            removalPolicy: this.removalPolicy
         })
         CloudTrailBucket.addToResourcePolicy(new PolicyStatement({
             resources: [CloudTrailBucket.bucketArn],

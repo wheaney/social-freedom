@@ -1,16 +1,16 @@
 import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
-import {internalAPIIdentityCheck, apiGatewayLambdaResponse} from "./shared/util";
+import * as Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostCreateEvent} from "./shared/post-types";
 import {PostsTablePartitionKey} from "./shared/constants";
 
 export const handler = async (event:APIGatewayEvent) => {
-    internalAPIIdentityCheck(event)
+    return await Util.apiGatewayProxyWrapper(async () => {
+        Util.internalAPIIdentityCheck(event)
 
-    await postCreate(JSON.parse(event.body))
-
-    return apiGatewayLambdaResponse()
+        await postCreate(JSON.parse(event.body))
+    })
 };
 
 export const postCreate = async (request:PostCreateEvent) => {

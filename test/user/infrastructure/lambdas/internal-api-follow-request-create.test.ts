@@ -23,6 +23,7 @@ describe("the internal FollowRequestCreate handler", () => {
         await internalFollowRequestCreate('authToken', FollowingAccountDetails)
 
         expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'followingUserId')
+        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalledWith(FollowingAccountDetails)
         expect(mockedUtil.apiRequest).toHaveBeenCalledWith('apiDomainName', '/follower/follow-request-create',
             'authToken', 'POST', ThisAccountDetails)
     })
@@ -31,6 +32,7 @@ describe("the internal FollowRequestCreate handler", () => {
         await internalFollowRequestCreate('authToken', ThisAccountDetails, FollowingAccountDetails)
 
         expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'someUserId')
+        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalled()
         expect(mockedUtil.apiRequest).toHaveBeenCalledWith('myApiDomain.com', '/follower/follow-request-create',
             'authToken', 'POST', FollowingAccountDetails)
         expect(mockedUtil.getThisAccountDetails).not.toHaveBeenCalled()
