@@ -1,5 +1,5 @@
 import {PromiseResult} from "aws-sdk/lib/request";
-import {GetItemOutput} from "aws-sdk/clients/dynamodb";
+import {GetItemOutput, Key} from "aws-sdk/clients/dynamodb";
 import * as AWS from "aws-sdk";
 import {AWSError} from "aws-sdk";
 import {APIGatewayEvent} from "aws-lambda";
@@ -31,7 +31,7 @@ const Util = {
     },
 
     followerAPIIdentityCheck: async (event: APIGatewayEvent): Promise<void> => {
-        if (!await Util.isFollowerIdentity(Util.getUserId(event)) &&
+        if (!await Util.isFollower(Util.getUserId(event)) &&
                 process.env.USER_ID !== Util.getUserId(event)) {
             throw new Error(`Unauthorized userId: ${Util.getUserId(event)}`)
         }
@@ -64,24 +64,6 @@ const Util = {
         // TODO
 
         return {} as Profile
-    },
-
-    isFollowerIdentity: async (cognitoIdentityId: string): Promise<boolean> => {
-        const queryResult = await new AWS.DynamoDB().query({
-            TableName: process.env.TRACKED_ACCOUNTS_TABLE,
-            IndexName: 'AccountsByIdentityId',
-            KeyConditionExpression: "#cognitoIdentityId = :cognitoIdentityId",
-            ExpressionAttributeNames: {
-                "#cognitoIdentityId": "cognitoIdentityId"
-            },
-            ExpressionAttributeValues: {
-                ":cognitoIdentityId": {S: cognitoIdentityId}
-            }
-        }).promise()
-
-        if (queryResult.Count === 0) return false
-
-        return await Util.isFollower(queryResult.Items[0]["userId"].S)
     },
 
     isFollower: async (userId: string): Promise<boolean> => {
@@ -242,6 +224,23 @@ const Util = {
             TopicArn: `arn:aws:sns:${account.identifiers.region}:${account.identifiers.accountId}:ProfileUpdates-${account.userId}`,
             Endpoint: process.env.PROFILE_UPDATE_HANDLER,
             Protocol: 'lambda'
+        }).promise()
+    },
+
+    queryTimestampIndex: async (tableName: string, indexName: string, partitionKey: string, startKey?: Key) => {
+        return await new AWS.DynamoDB().query({
+            TableName: tableName,
+            IndexName: indexName,
+            Limit: 5,
+            ScanIndexForward: false,
+            KeyConditionExpression: "#key = :key",
+            ExpressionAttributeNames: {
+                "#key": "key"
+            },
+            ExpressionAttributeValues: {
+                ":key": {S: partitionKey}
+            },
+            ExclusiveStartKey: startKey
         }).promise()
     }
 }

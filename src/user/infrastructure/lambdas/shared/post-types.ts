@@ -4,8 +4,13 @@ export enum PostType {
     Video = 'Video'
 }
 
-export type PostCreateEvent = {
+export type BasicPostDetails = {
     type: PostType,
     body: string,
     mediaUrl?: string
+}
+
+export type FullPostDetails = BasicPostDetails & {
+    id: string,
+    timestamp: number
 }

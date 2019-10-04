@@ -2,7 +2,7 @@ import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
 import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
-import {PostCreateEvent} from "./shared/post-types";
+import {BasicPostDetails} from "./shared/post-types";
 import {PostsTablePartitionKey} from "./shared/constants";
 
 export const handler = async (event:APIGatewayEvent) => {
@@ -13,7 +13,7 @@ export const handler = async (event:APIGatewayEvent) => {
     })
 };
 
-export const postCreate = async (request:PostCreateEvent) => {
+export const postCreate = async (request:BasicPostDetails) => {
     const awsAccountId = process.env.ACCOUNT_ID
     const awsRegion = process.env.REGION
     const userId = process.env.USER_ID

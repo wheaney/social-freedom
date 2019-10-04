@@ -103,6 +103,14 @@ export class UserStack extends cdk.Stack {
             actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem']
         }));
         ExecutionerRole.addToPolicy(new PolicyStatement({
+            resources: [
+                this.indexArn(PostsTable, 'PostsByTimestamp'),
+                this.indexArn(PostActivitiesTable, 'PostActivitiesByTimestamp'),
+                this.indexArn(FeedTable, 'FeedByTimestamp'),
+            ],
+            actions: ['dynamodb:Query']
+        }));
+        ExecutionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTopic.topicArn, ProfileUpdatesTopic.topicArn],
             actions: ['sns:Publish']
         }));
@@ -251,5 +259,9 @@ export class UserStack extends cdk.Stack {
             action: 'lambda:InvokeFunction',
             principal: new ServicePrincipal("events.amazonaws.com")
         })
+    }
+
+    indexArn(table: Table, indexName: string) {
+        return `${table.tableArn}/index/${indexName}`
     }
 }
