@@ -77,7 +77,7 @@ export class ApiHelper {
                     'method.response.header.Access-Control-Allow-Headers': "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
                     'method.response.header.Access-Control-Allow-Origin': `'${this.allowedOrigin}'`,
                     'method.response.header.Access-Control-Allow-Credentials': "'true'",
-                    'method.response.header.Access-Control-Allow-Methods': "'GET,POST,OPTIONS'",
+                    'method.response.header.Access-Control-Allow-Methods': "'GET,POST,PUT,DELETE,OPTIONS'",
                 }
             }],
             passthroughBehavior: PassthroughBehavior.WHEN_NO_MATCH,

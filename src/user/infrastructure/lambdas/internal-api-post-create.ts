@@ -30,7 +30,7 @@ export const postCreate = async (request:PostCreateEvent) => {
             "timestamp": {N: `${timestamp}`},
             "type": {S: request.type},
             "body": {S: request.body},
-            "mediaUrl": {S: request.mediaUrl} // TODO - validate this
+            "mediaUrl": request.mediaUrl ? {S: request.mediaUrl} : undefined // TODO - validate this
         }
     }).promise()
 

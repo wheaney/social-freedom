@@ -25,17 +25,15 @@ const Util = {
     },
 
     internalAPIIdentityCheck: (event: APIGatewayEvent): void => {
-        if (!event || !event.requestContext || !event.requestContext.identity ||
-            process.env.COGNITO_IDENTITY_ID !== Util.getUserId(event)) {
-            throw new Error('Unauthorized identity')
+        if (process.env.USER_ID !== Util.getUserId(event)) {
+            throw new Error(`Unauthorized userId: ${Util.getUserId(event)}`)
         }
     },
 
     followerAPIIdentityCheck: async (event: APIGatewayEvent): Promise<void> => {
-        if (!event || !event.requestContext || !event.requestContext.identity ||
-            (!await Util.isFollowerIdentity(Util.getUserId(event)) &&
-                process.env.COGNITO_IDENTITY_ID !== Util.getUserId(event))) {
-            throw new Error('Unauthorized identity')
+        if (!await Util.isFollowerIdentity(Util.getUserId(event)) &&
+                process.env.USER_ID !== Util.getUserId(event)) {
+            throw new Error(`Unauthorized userId: ${Util.getUserId(event)}`)
         }
     },
 

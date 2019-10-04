@@ -3,9 +3,12 @@ import * as cdk from "@aws-cdk/core";
 import {CfnParameter} from "@aws-cdk/core";
 import {Code} from "@aws-cdk/aws-lambda";
 import {AttributeType, Table} from "@aws-cdk/aws-dynamodb"
-import {PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
+import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
+import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
+import {Bucket} from "@aws-cdk/aws-s3";
 import {ApiHelper, LambdaHelper} from "../../shared/infrastructure-utils";
+import {BucketDeployment, Source} from "@aws-cdk/aws-s3-deployment";
 
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'FederalStack');
@@ -87,5 +90,37 @@ const Helper = new LambdaHelper(stack, ExecutionerRole, EnvironmentVariables, La
 const ApiUtil = new ApiHelper(Helper, CognitoAuthorizer, "social-freedom.com")
 
 ApiUtil.constructLambdaApi(Api.root, 'register', 'POST', 'account-registration')
+
+const WebBucket = new Bucket(stack, 'WebsiteDistributionBucket');
+
+const OriginAccessIdentity = new CfnCloudFrontOriginAccessIdentity(stack, "CloudFrontOriginAccessIdentity", {
+    cloudFrontOriginAccessIdentityConfig: {
+        comment: "CloudFront access for user media files"
+    }
+})
+
+const WebDistribution = new CloudFrontWebDistribution(stack, 'CloudFrontWebDistribution', {
+    originConfigs: [
+        {
+            s3OriginSource: {
+                s3BucketSource: WebBucket,
+                originAccessIdentityId: OriginAccessIdentity.ref
+            },
+            behaviors : [ {isDefaultBehavior: true}]
+        }
+    ]
+});
+WebBucket.addToResourcePolicy(new PolicyStatement({
+    principals: [new CanonicalUserPrincipal(OriginAccessIdentity.attrS3CanonicalUserId)],
+    resources: [WebBucket.bucketArn, WebBucket.arnForObjects('*')],
+    actions: ["s3:GetBucket*", "s3:GetObject*", "s3:List*"]
+}))
+
+new BucketDeployment(stack, 'DeployWithInvalidation', {
+    sources: [Source.asset('./src/federal/website')],
+    destinationBucket: WebBucket,
+    distribution: WebDistribution,
+    distributionPaths: ['/index.html']
+});
 
 app.synth()
