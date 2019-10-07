@@ -6,14 +6,15 @@
   "scripts": {
     "test": "jest",
     "prebuild": "rm -rf dist",
-    "build": "tsc",
+    "build": "tsc && cd ./src/federal/website && npm run build",
     "postbuild": "cp -r ./src/user/infrastructure/lambdas/node_modules ./dist/src/user/infrastructure/lambdas",
     "watch": "tsc -w",
-    "postinstall": "cd ./src/user/infrastructure/lambdas && npm install",
+    "postinstall": "cd ./src/user/infrastructure/lambdas && npm install && cd ./src/federal/website && npm install",
     "federalstackcheck": "npm run build && cdk -v -a \"ts-node ./src/federal/infrastructure/app.ts\" list",
     "federalstackdeploy": "npm run build && cdk -v -a \"ts-node ./src/federal/infrastructure/app.ts\" deploy",
     "userstackcheck": "npm run build && cdk -v -a \"ts-node ./src/user/infrastructure/app.ts\" list",
-    "userstackdeploy": "npm run build && cdk -v -a \"ts-node ./src/user/infrastructure/app.ts\" deploy"
+    "userstackdeploy": "npm run build && cdk -v -a \"ts-node ./src/user/infrastructure/app.ts\" deploy",
+    "startweb": "cd ./src/federal/website && npm start"
   },
   "repository": {
     "type": "git",

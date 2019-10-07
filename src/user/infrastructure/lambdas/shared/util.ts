@@ -43,7 +43,7 @@ const Util = {
             body: responseBody ? JSON.stringify(responseBody) : '',
             isBase64Encoded: false,
             headers: {
-                'Access-Control-Allow-Origin': process.env.CORS_ALLOW_ORIGIN
+                'Access-Control-Allow-Origin': process.env.CORS_ORIGIN
             }
         }
     },
@@ -129,7 +129,7 @@ const Util = {
                 identifiers: {
                     accountId: requesterDetailsItem["identifiers"].M["accountId"].S,
                     region: requesterDetailsItem["identifiers"].M["region"].S,
-                    apiDomainName: requesterDetailsItem["identifiers"].M["apiDomainName"].S,
+                    apiOrigin: requesterDetailsItem["identifiers"].M["apiOrigin"].S,
                 },
                 profile: JSON.parse(requesterDetailsItem["profile"].S)
             }
@@ -196,7 +196,7 @@ const Util = {
             identifiers: {
                 accountId: process.env.ACCOUNT_ID,
                 region: process.env.REGION,
-                apiDomainName: process.env.API_DOMAIN_NAME
+                apiOrigin: process.env.API_ORIGIN
             },
             profile: await Util.getProfile()
         }
@@ -211,7 +211,7 @@ const Util = {
                     M: {
                         accountId: {S: accountDetails.identifiers.accountId},
                         region: {S: accountDetails.identifiers.region},
-                        apiDomainName: {S: accountDetails.identifiers.apiDomainName},
+                        apiOrigin: {S: accountDetails.identifiers.apiOrigin},
                     }
                 },
                 profile: {S: JSON.stringify(accountDetails.profile)}

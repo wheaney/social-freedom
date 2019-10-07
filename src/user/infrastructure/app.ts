@@ -3,6 +3,9 @@ import * as cdk from "@aws-cdk/core";
 import {UserStack} from "./stack";
 
 const app = new cdk.App();
-new UserStack(app, false, 'https://d325d3uej8gzt4.cloudfront.net', 'dev', 'arn:aws:cognito-idp:us-east-1:026810594887:userpool/us-east-1_NNDzc6RVP');
+
+// we'll be able to set these environment variables in our pipeline's CodeBuild step
+// https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-codebuild-project-environmentvariable.html
+new UserStack(app, process.env.NODE_ENV !== 'production', process.env.FEDERAL_STACK_WEBSITE_ORIGIN, process.env.USER_STACK_USER_ID, process.env.FEDERAL_STACK_USER_POOL_ARN);
 
 app.synth();

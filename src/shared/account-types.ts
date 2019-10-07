@@ -13,7 +13,7 @@ export type BasicAccountIdentifiers = {
 export type AccountRegistrationEvent = BasicAccountIdentifiers
 
 export type AccountIdentifiers = BasicAccountIdentifiers & {
-    apiDomainName: string,
+    apiOrigin: string,
 }
 
 export type AccountDetails = {

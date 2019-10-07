@@ -47,4 +47,6 @@ export const postCreate = async (request:BasicPostDetails) => {
         }),
         MessageStructure: "json"
     }).promise()
+
+    // TODO - add this post to our own Feed
 }

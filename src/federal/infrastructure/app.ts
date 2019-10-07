@@ -1,6 +1,5 @@
 import 'source-map-support/register';
 import * as cdk from "@aws-cdk/core";
-import {CfnParameter} from "@aws-cdk/core";
 import {Code} from "@aws-cdk/aws-lambda";
 import {AttributeType, Table} from "@aws-cdk/aws-dynamodb"
 import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
@@ -13,11 +12,7 @@ import {BucketDeployment, Source} from "@aws-cdk/aws-s3-deployment";
 const app = new cdk.App();
 const stack = new cdk.Stack(app, 'FederalStack');
 
-// Parameters
-const environmentParam = new CfnParameter(stack, 'Environment', {
-    default: 'development'
-})
-const isDevelopment:boolean = environmentParam.valueAsString !== 'production';
+const isDevelopment:boolean = process.env.NODE_ENV !== 'production';
 
 // one Role for all Lambdas to assume
 const ExecutionerRole = new Role(stack, "Executioner", {
@@ -68,14 +63,15 @@ const AccountsTable = new Table(stack, "Accounts", {
 
 ExecutionerRole.addToPolicy(new PolicyStatement({
     resources: [AccountsTable.tableArn],
-    actions: ['dynamodb:putItem']
+    actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem']
 }));
 
 const Api = new RestApi(stack, "API", {
     endpointTypes: [EndpointType.EDGE]
 })
 const EnvironmentVariables = {
-    ACCOUNTS_TABLE: AccountsTable.tableName
+    ACCOUNTS_TABLE: AccountsTable.tableName,
+    CORS_ORIGIN: isDevelopment ? '*' : process.env.FEDERAL_STACK_WEBSITE_ORIGIN
 }
 
 const CognitoAuthorizer = new CfnAuthorizer(stack, "CognitoAuthorizer", {
@@ -83,13 +79,14 @@ const CognitoAuthorizer = new CfnAuthorizer(stack, "CognitoAuthorizer", {
     type: AuthorizationType.COGNITO,
     identitySource: "method.request.header.Authorization",
     restApiId: Api.restApiId,
-    providerArns: ['arn:aws:cognito-idp:us-east-1:026810594887:userpool/us-east-1_NNDzc6RVP'] // TODO - remove hardcoded value
+    providerArns: [process.env.FEDERAL_STACK_USER_POOL_ARN] // TODO - build user pool in CDK
 })
 const Lambdas = Code.fromAsset('./dist/src/federal/infrastructure/lambdas')
 const Helper = new LambdaHelper(stack, ExecutionerRole, EnvironmentVariables, Lambdas)
-const ApiUtil = new ApiHelper(Helper, CognitoAuthorizer, "social-freedom.com")
+const ApiUtil = new ApiHelper(Helper, CognitoAuthorizer, isDevelopment ? '*' : process.env.FEDERAL_STACK_WEBSITE_ORIGIN)
 
 ApiUtil.constructLambdaApi(Api.root, 'register', 'POST', 'account-registration')
+ApiUtil.constructLambdaApi(Api.root, 'identity', 'GET', 'identity-get')
 
 const WebBucket = new Bucket(stack, 'WebsiteDistributionBucket');
 
@@ -117,7 +114,7 @@ WebBucket.addToResourcePolicy(new PolicyStatement({
 }))
 
 new BucketDeployment(stack, 'DeployWithInvalidation', {
-    sources: [Source.asset('./src/federal/website')],
+    sources: [Source.asset('./src/federal/website/build')],
     destinationBucket: WebBucket,
     distribution: WebDistribution,
     distributionPaths: ['/index.html']

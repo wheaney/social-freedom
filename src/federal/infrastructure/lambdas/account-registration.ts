@@ -1,19 +1,16 @@
 import * as AWS from "aws-sdk"
 import {AccountRegistrationEvent} from "../../../shared/account-types";
 import {APIGatewayEvent} from "aws-lambda";
+import Util from "./shared/util";
 
 export const handler = async (event:APIGatewayEvent) => {
-    await doHandle(event.requestContext.authorizer.claims.sub, JSON.parse(event.body))
-
-    return {
-        statusCode: "200",
-        body: '',
-        isBase64Encoded: false
-    }
+    return Util.apiGatewayProxyWrapper(async () => {
+        await registerAccount(Util.getUserId(event), JSON.parse(event.body))
+    })
 };
 
 // visible for testing
-export const doHandle = async (userId: string, request:AccountRegistrationEvent) => {
+export const registerAccount = async (userId: string, request:AccountRegistrationEvent) => {
     // Verify identity, region, and account ID
     // TODO
 

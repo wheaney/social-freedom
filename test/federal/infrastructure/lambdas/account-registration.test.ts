@@ -1,7 +1,7 @@
 import * as AWSMock from "aws-sdk-mock";
 import * as AWS from "aws-sdk";
 import {PutItemInput} from "aws-sdk/clients/dynamodb";
-import {doHandle as handler} from "../../../../src/federal/infrastructure/lambdas/account-registration"
+import {registerAccount} from "../../../../src/federal/infrastructure/lambdas/account-registration"
 
 beforeAll(async (done) => {
     process.env = {
@@ -26,7 +26,7 @@ describe("the AccountRegistration handler", () => {
             callback(null, {});
         })
 
-        await handler("userId", {
+        await registerAccount("userId", {
             accountId: "accountId",
             region: "region"
         })
@@ -50,7 +50,7 @@ describe("the AccountRegistration handler", () => {
         })
 
         try {
-            await handler("userId", {
+            await registerAccount("userId", {
                 accountId: "accountId",
                 region: "region"
             })

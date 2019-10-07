@@ -5,7 +5,7 @@ export const FollowingAccountDetails:AccountDetails = {
     identifiers: {
         accountId: "followingAccountId",
         region: "followingRegion",
-        apiDomainName: "apiDomainName"
+        apiOrigin: "apiDomainName"
     },
     profile: {
         name: "Following User",
@@ -18,7 +18,7 @@ export const ThisAccountDetails:AccountDetails = {
     identifiers: {
         region: "us-west-1",
         accountId: "12345",
-        apiDomainName: "myApiDomain.com"
+        apiOrigin: "myApiDomain.com"
     },
     profile: {
         name: "Wayne Heaney",
@@ -34,7 +34,7 @@ export function setupEnvironmentVariables() {
         ACCOUNT_DETAILS_TABLE: "AccountDetails",
         ACCOUNTS_TABLE: "Accounts",
         POSTS_TABLE: "PostsTableName",
-        API_DOMAIN_NAME: "myApiDomain.com",
+        API_ORIGIN: "myApiDomain.com",
         PROFILE_UPDATE_HANDLER: "profileUpdateHandlerArn"
     }
 }

@@ -29,7 +29,7 @@ export const internalFollowRequestRespond = async (cognitoAuthToken: string, res
             // TODO - unsubscribe from SNS topic
         }
 
-        const requestApiDomain: string = requesterDetails.identifiers.apiDomainName
+        const requestApiDomain: string = requesterDetails.identifiers.apiOrigin
         await Util.apiRequest(requestApiDomain, '/follower/follow-request-response', cognitoAuthToken,
             'POST', followerApiResponsePayload)
 

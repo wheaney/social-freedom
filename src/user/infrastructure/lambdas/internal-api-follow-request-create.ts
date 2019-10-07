@@ -18,6 +18,6 @@ export const internalFollowRequestCreate = async (cognitoAuthToken: string, requ
     // we can't subscribe to profile updates yet, but we can at least store what we know about this account
     await Util.putTrackedAccountDetails(request)
 
-    await Util.apiRequest(request.identifiers.apiDomainName, '/follower/follow-request-create',
+    await Util.apiRequest(request.identifiers.apiOrigin, '/follower/follow-request-create',
         cognitoAuthToken, 'POST', thisAccountDetails || await Util.getThisAccountDetails())
 }

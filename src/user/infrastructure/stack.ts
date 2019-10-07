@@ -22,11 +22,11 @@ export class UserStack extends cdk.Stack {
     readonly userId: string;
     readonly removalPolicy: RemovalPolicy;
 
-    constructor(app: cdk.App, production: boolean, federalApiDomainName: string, userId: string, userPoolArn: string) {
+    constructor(app: cdk.App, isDevelopment: boolean, federalWebsiteOrigin: string, userId: string, userPoolArn: string) {
         super(app, `UserStack-${userId}`);
 
         // don't want accounts to lose all their data if CloudFormation attempts to revert/remove resources
-        this.removalPolicy = production ? RemovalPolicy.RETAIN : RemovalPolicy.DESTROY
+        this.removalPolicy = isDevelopment ? RemovalPolicy.DESTROY : RemovalPolicy.RETAIN
 
         this.userId = userId;
 
@@ -141,8 +141,8 @@ export class UserStack extends cdk.Stack {
             TRACKED_ACCOUNTS_TABLE: TrackedAccounts.tableName,
             MEDIA_BUCKET: MediaBucket.bucketName,
             CDN_DOMAIN_NAME: WebDistribution.domainName,
-            API_DOMAIN_NAME: Api.domainName,
-            CORS_ALLOW_ORIGIN: federalApiDomainName
+            API_ORIGIN: Api.domainName,
+            CORS_ORIGIN: isDevelopment ? '*' : federalWebsiteOrigin
         }
 
         const LambdaCode = Code.fromAsset('./dist/src/user/infrastructure/lambdas')
@@ -152,7 +152,7 @@ export class UserStack extends cdk.Stack {
             ...EnvironmentVariables,
             PROFILE_UPDATE_HANDLER: ProfileUpdateHandler.functionArn
         }, LambdaCode)
-        const ApiUtils = new ApiHelper(LambdaUtils, CognitoAuthorizer, federalApiDomainName)
+        const ApiUtils = new ApiHelper(LambdaUtils, CognitoAuthorizer, isDevelopment ? '*' : federalWebsiteOrigin)
 
         const FollowerApi = Api.root.addResource('follower')
         ApiUtils.constructLambdaApi(FollowerApi, 'follow-request', 'POST', "follower-api-follow-request-create")
