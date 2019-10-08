@@ -26,6 +26,7 @@ export const postCreate = async (request:BasicPostDetails) => {
         Item: {
             "key": {S: PostsTablePartitionKey},
             "id": {S: id},
+            "userId": {S: userId},
             "timeSortKey": {S: `${timestamp}-${id}`},
             "timestamp": {N: `${timestamp}`},
             "type": {S: request.type},
@@ -41,6 +42,7 @@ export const postCreate = async (request:BasicPostDetails) => {
             default: `create ${request.type} ${request.body} ${request.mediaUrl}`,
             eventType: "create",
             id: id,
+            userId: userId,
             type: request.type,
             body: request.body,
             mediaUrl: request.mediaUrl

@@ -8,7 +8,8 @@ export type Profile = {
 
 export type BasicAccountIdentifiers = {
     accountId: string,
-    region: string
+    region: string,
+    apiOrigin?: string
 }
 export type AccountRegistrationEvent = BasicAccountIdentifiers
 

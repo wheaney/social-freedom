@@ -19,7 +19,8 @@ export const registerAccount = async (userId: string, request:AccountRegistratio
         Item: {
             "userId": {S: userId},
             "accountId": {S: request.accountId},
-            "region": {S: request.region}
+            "region": {S: request.region},
+            "apiOrigin": {S: request.apiOrigin}
         }
     }).promise()
 

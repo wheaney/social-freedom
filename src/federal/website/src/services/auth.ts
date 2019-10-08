@@ -1,9 +1,9 @@
 import {GetIdentityResponse} from "../../../../shared/auth-types";
 
 const Auth = {
-    getAuthToken: ():string | null => {
+    getAuthToken: ():string => {
         const params = new URLSearchParams(window.location.hash)
-        return params.get('#id_token')
+        return params.get('#id_token') || ''
     },
 
     getAuthUrl: (action: 'login' | 'signup' | 'logout'): string => {
@@ -18,7 +18,7 @@ const Auth = {
         if (Auth.isAuthenticated()) {
             const apiResponse = await fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/prod/identity`, {
                 headers: {
-                    'Authorization': Auth.getAuthToken() as string
+                    'Authorization': Auth.getAuthToken()
                 }
             })
             if (apiResponse.status === 200) {

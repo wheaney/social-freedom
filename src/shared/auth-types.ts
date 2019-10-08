@@ -1,3 +1,5 @@
+import {AccountIdentifiers} from "./account-types";
+
 export type Identity = {
     id: string, // sub
     authTime: number, // auth_time
@@ -9,5 +11,6 @@ export type Identity = {
 export type GetIdentityResponse = {
     isAuthenticated: boolean,
     identity?: Identity,
-    isRegistered?: boolean
+    isRegistered?: boolean,
+    accountIdentifiers?: AccountIdentifiers
 }

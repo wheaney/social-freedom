@@ -2,7 +2,7 @@ import 'source-map-support/register';
 import * as cdk from "@aws-cdk/core";
 import {Code} from "@aws-cdk/aws-lambda";
 import {AttributeType, Table} from "@aws-cdk/aws-dynamodb"
-import {CanonicalUserPrincipal, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
+import {CanonicalUserPrincipal, ManagedPolicy, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
 import {Bucket} from "@aws-cdk/aws-s3";
@@ -65,6 +65,7 @@ ExecutionerRole.addToPolicy(new PolicyStatement({
     resources: [AccountsTable.tableArn],
     actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem']
 }));
+ExecutionerRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'))
 
 const Api = new RestApi(stack, "API", {
     endpointTypes: [EndpointType.EDGE]
