@@ -100,7 +100,7 @@ export class UserStack extends cdk.Stack {
         // TODO - move role creation into Lambda helper, lock down function roles to only permit what's necessary
         ExecutionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTable.tableArn, PostActivitiesTable.tableArn, FeedTable.tableArn, TrackedAccounts.tableArn, AccountDetailsTable.tableArn],
-            actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem']
+            actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem', 'dynamodb:BatchGetItem']
         }));
         ExecutionerRole.addToPolicy(new PolicyStatement({
             resources: [

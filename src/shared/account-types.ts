@@ -23,6 +23,13 @@ export type AccountDetails = {
     profile: Profile
 }
 
+export type ReducedAccountDetails = {
+    userId: string,
+    name: string,
+    photoUrl?: string,
+    apiOrigin: string
+}
+
 type PublicSearchField = "name" | "phone" | "email"
 type VisibleField = "phone" | "email" | "birthday"
 export type AccountPreferences = {

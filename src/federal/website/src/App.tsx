@@ -1,20 +1,22 @@
 import React, {Component} from 'react'
 import {Button, Container, Grid, Loader, Menu, Placeholder, Segment, Visibility} from 'semantic-ui-react'
 import Auth from "./services/auth";
-import {GetIdentityResponse} from "../../../shared/auth-types";
-import Feed from "./components/Feed";
+import {AuthDetails} from "../../../shared/auth-types";
+import NewsFeed from "./components/NewsFeed";
 import HomepageHeading from "./components/HomepageHeading";
 import HomepageContent from "./components/HomepageContent";
 import Footer from "./components/Footer";
 import AccountRegistration from "./components/AccountRegistration";
+import { AuthContext } from './components/AuthContext';
 
 type AppState = {
     menuFixed: boolean,
     identityLoading: boolean,
-    identityDetails: GetIdentityResponse
+    authDetails: AuthDetails
 }
 
 class App extends Component<{}, AppState> {
+
     constructor(props: {}, state: AppState) {
         super(props, state)
 
@@ -22,7 +24,7 @@ class App extends Component<{}, AppState> {
         this.state = {
             menuFixed: false,
             identityLoading: isAuthenticated,
-            identityDetails: {
+            authDetails: {
                 isAuthenticated: isAuthenticated
             }
         }
@@ -31,21 +33,21 @@ class App extends Component<{}, AppState> {
     }
 
     async componentDidMount(): Promise<void> {
-        if (this.state.identityDetails.isAuthenticated) {
+        if (this.state.authDetails.isAuthenticated) {
             await this.refreshIdentity()
         }
     }
 
     async refreshIdentity() {
         try {
-            const identity: GetIdentityResponse = await Auth.getIdentity()
+            const auth: AuthDetails = await Auth.getIdentity()
             this.setState({
                 identityLoading: false,
-                identityDetails: identity
+                authDetails: auth
             })
         } catch (err) {
             this.setState({
-                identityDetails: {
+                authDetails: {
                     isAuthenticated: false
                 },
                 identityLoading: false
@@ -56,8 +58,8 @@ class App extends Component<{}, AppState> {
     hideFixedMenu = () => this.setState({menuFixed: false})
     showFixedMenu = () => this.setState({menuFixed: true})
     render() {
-        const {identityLoading, identityDetails, menuFixed} = this.state
-        const isAuthenticated = identityDetails.isAuthenticated
+        const {identityLoading, authDetails, menuFixed} = this.state
+        const isAuthenticated = authDetails.isAuthenticated
 
         const menu = <Menu
             fixed={!isAuthenticated && menuFixed ? 'top' : undefined}
@@ -89,7 +91,7 @@ class App extends Component<{}, AppState> {
                     <Grid columns={2} divided>
                         <Grid.Row>
                             <Grid.Column verticalAlign="middle">
-                                Welcome {identityDetails.identity && identityDetails.identity.username}!
+                                Welcome {authDetails.identity && authDetails.identity.username}!
                             </Grid.Column>
                             <Grid.Column>
                                 <Button as='a' secondary
@@ -126,11 +128,11 @@ class App extends Component<{}, AppState> {
             </React.Fragment>
         } else {
             if (!identityLoading) {
-                return <React.Fragment>
+                return <AuthContext.Provider value={authDetails}>
                     {menu}
-                    {identityDetails.isRegistered && <Feed/> ||
-                    <AccountRegistration identityDetails={identityDetails} submitSuccess={this.refreshIdentity}/>}
-                </React.Fragment>
+                    {authDetails.isRegistered && <NewsFeed/> ||
+                    <AccountRegistration submitSuccess={this.refreshIdentity}/>}
+                </AuthContext.Provider>
             } else {
                 return <Loader active/>
             }

@@ -23,7 +23,6 @@ export const internalFollowRequestRespond = async (cognitoAuthToken: string, res
         if (response.accepted) {
             await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, response.userId)
 
-            // TODO - limit this to just visible fields
             followerApiResponsePayload['accountDetails'] = await Util.getThisAccountDetails()
         } else {
             // TODO - unsubscribe from SNS topic

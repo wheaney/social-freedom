@@ -9,7 +9,10 @@ export const handler = async (event:APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
         Util.internalAPIIdentityCheck(event)
 
-        await postCreate(JSON.parse(event.body))
+        await postCreate({
+            ...JSON.parse(event.body),
+            userId: Util.getUserId(event)
+        })
     })
 };
 
@@ -26,7 +29,7 @@ export const postCreate = async (request:BasicPostDetails) => {
         Item: {
             "key": {S: PostsTablePartitionKey},
             "id": {S: id},
-            "userId": {S: userId},
+            "userId": {S: request.userId},
             "timeSortKey": {S: `${timestamp}-${id}`},
             "timestamp": {N: `${timestamp}`},
             "type": {S: request.type},

@@ -1,7 +1,7 @@
 import {APIGatewayEvent} from "aws-lambda";
 import Util from "./shared/util";
 import * as AWS from 'aws-sdk'
-import {GetIdentityResponse} from "../../../shared/auth-types";
+import {AuthDetails} from "../../../shared/auth-types";
 
 export const handler = async (event:APIGatewayEvent) => {
     return Util.apiGatewayProxyWrapper(async () => {
@@ -23,7 +23,7 @@ export const handler = async (event:APIGatewayEvent) => {
                 region: identifiers['region'].S,
                 apiOrigin: !!identifiers['apiOrigin'] ? identifiers['apiOrigin'].S : undefined
             }
-        } as GetIdentityResponse
+        } as AuthDetails
     })
 };
 

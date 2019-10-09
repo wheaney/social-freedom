@@ -8,7 +8,7 @@ export type Identity = {
     expiration: Date // exp
 }
 
-export type GetIdentityResponse = {
+export type AuthDetails = {
     isAuthenticated: boolean,
     identity?: Identity,
     isRegistered?: boolean,

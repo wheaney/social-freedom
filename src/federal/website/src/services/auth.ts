@@ -1,4 +1,4 @@
-import {GetIdentityResponse} from "../../../../shared/auth-types";
+import {AuthDetails} from "../../../../shared/auth-types";
 
 const Auth = {
     getAuthToken: ():string => {
@@ -14,7 +14,7 @@ const Auth = {
         return !!Auth.getAuthToken()
     },
 
-    getIdentity: async ():Promise<GetIdentityResponse> => {
+    getIdentity: async ():Promise<AuthDetails> => {
         if (Auth.isAuthenticated()) {
             const apiResponse = await fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/prod/identity`, {
                 headers: {

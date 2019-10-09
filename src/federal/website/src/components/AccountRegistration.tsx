@@ -2,7 +2,7 @@ import * as React from 'react'
 import {Component} from 'react'
 import {Container, Form, Grid, List, Message, Segment} from "semantic-ui-react";
 import Auth from "../services/auth";
-import {GetIdentityResponse} from "../../../../shared/auth-types";
+import {AuthContext} from "./AuthContext";
 
 const RegionOptions = [
     {key: "us-east-2", text: "US East (Ohio) ", value: "us-east-2"},
@@ -31,7 +31,6 @@ const RegionOptions = [
 ]
 
 type Properties = {
-    identityDetails: GetIdentityResponse,
     submitSuccess: () => Promise<void>
 }
 type State = {
@@ -45,12 +44,15 @@ type State = {
     submitError?: boolean
 }
 export default class AccountRegistration extends Component<Properties, State> {
+    static contextType = AuthContext
+    context!: React.ContextType<typeof AuthContext>
+
     constructor(props: Properties, state: State) {
         super(props, state)
-        this.state = props.identityDetails.accountIdentifiers ? {
-            accountId: props.identityDetails.accountIdentifiers.accountId || '',
-            region: props.identityDetails.accountIdentifiers.region || '',
-            apiOrigin: props.identityDetails.accountIdentifiers.apiOrigin || ''
+        this.state = this.context.accountIdentifiers ? {
+            accountId: this.context.accountIdentifiers.accountId || '',
+            region: this.context.accountIdentifiers.region || '',
+            apiOrigin: this.context.accountIdentifiers.apiOrigin || ''
         } : {}
     }
 
@@ -94,7 +96,7 @@ export default class AccountRegistration extends Component<Properties, State> {
 
     render() {
         // @ts-ignore
-        const identityId = this.props.identityDetails.identity.id
+        const identityId = this.context.identity.id
         return <Container>
             <Message>
                 <Message.Header>Register your account stack</Message.Header>
@@ -162,11 +164,14 @@ export default class AccountRegistration extends Component<Properties, State> {
             </Message>
             <Form success={this.state.submitSuccess} error={this.state.submitError}>
                 <Form.Input label="User ID" value={identityId} readOnly/>
-                <Form.Input label="AWS Account ID" name='accountId' value={this.state.accountId} required onChange={this.handleChange}
+                <Form.Input label="AWS Account ID" name='accountId' value={this.state.accountId} required
+                            onChange={this.handleChange}
                             error={this.state.accountIdError}/>
-                <Form.Select label="AWS Account Region" name='region' value={this.state.region} options={RegionOptions} required onChange={this.handleChange}
+                <Form.Select label="AWS Account Region" name='region' value={this.state.region} options={RegionOptions}
+                             required onChange={this.handleChange}
                              error={this.state.regionError}/>
-                <Form.Input label="Account API Origin" name='apiOrigin' value={this.state.apiOrigin} placeholder="Output from user stack CDK deployment" required
+                <Form.Input label="Account API Origin" name='apiOrigin' value={this.state.apiOrigin}
+                            placeholder="Output from user stack CDK deployment" required
                             onChange={this.handleChange} error={this.state.apiOriginError}/>
                 <Form.Button onClick={this.submitForm}>Register</Form.Button>
             </Form>

@@ -4,7 +4,7 @@ import * as AWS from "aws-sdk";
 import {AWSError} from "aws-sdk";
 import {APIGatewayEvent} from "aws-lambda";
 import * as http from "http";
-import {AccountDetails, Profile} from "../../../../shared/account-types";
+import {AccountDetails, Profile, ReducedAccountDetails} from "../../../../shared/account-types";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
@@ -190,31 +190,33 @@ const Util = {
         return event.requestContext.authorizer.claims.sub
     },
 
-    getThisAccountDetails: async (): Promise<AccountDetails> => {
+    getThisAccountDetails: async (): Promise<ReducedAccountDetails> => {
+        const profile = await Util.getProfile()
         return {
             userId: process.env.USER_ID,
-            identifiers: {
-                accountId: process.env.ACCOUNT_ID,
-                region: process.env.REGION,
-                apiOrigin: process.env.API_ORIGIN
-            },
-            profile: await Util.getProfile()
+            apiOrigin: process.env.API_ORIGIN,
+            name: profile.name,
+            photoUrl: profile.photoUrl
         }
     },
 
     putTrackedAccountDetails: async (accountDetails: AccountDetails) => {
+        await Util.putTrackedAccount({
+            userId: accountDetails.userId,
+            apiOrigin: accountDetails.identifiers.apiOrigin,
+            name: accountDetails.profile.name,
+            photoUrl: accountDetails.profile.photoUrl
+        })
+    },
+
+    putTrackedAccount: async (trackedAccount: ReducedAccountDetails) => {
         await new AWS.DynamoDB().putItem({
             TableName: process.env.TRACKED_ACCOUNTS_TABLE,
             Item: {
-                userId: {S: accountDetails.userId},
-                identifiers: {
-                    M: {
-                        accountId: {S: accountDetails.identifiers.accountId},
-                        region: {S: accountDetails.identifiers.region},
-                        apiOrigin: {S: accountDetails.identifiers.apiOrigin},
-                    }
-                },
-                profile: {S: JSON.stringify(accountDetails.profile)}
+                userId: {S: trackedAccount.userId},
+                apiOrigin: {S: trackedAccount.apiOrigin},
+                name: {S: trackedAccount.name},
+                photoUrl: {S: trackedAccount.photoUrl}
             }
         }).promise()
     },
