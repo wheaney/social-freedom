@@ -1,5 +1,5 @@
 {
-  "name": "social-freedom",
+  "name": "@social-freedom/infrastructure",
   "version": "0.0.3",
   "description": "Open-source social networking framework where each user account owns their infrastructure",
   "main": "index.js",
@@ -16,6 +16,9 @@
     "type": "git",
     "url": "git+https://github.com/wheaney/social-freedom.git"
   },
+  "keywords": [
+    "social-freedom"
+  ],
   "author": "Wayne Heaney",
   "license": "SEE LICENSE IN LICENSE",
   "bugs": {
