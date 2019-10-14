@@ -1,6 +1,6 @@
-node_modules/
+node_modules
 *.iml
 .cdk.*
 cdk.*
-dist/
-/src/federal/website/build/
+dist
+build

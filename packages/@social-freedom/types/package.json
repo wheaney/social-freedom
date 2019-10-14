@@ -1,0 +1,30 @@
+{
+  "name": "@social-freedom/types",
+  "version": "0.0.1",
+  "description": "Shared TypeScript types for the social-freedom project",
+  "scripts": {
+    "prebuild": "rm -rf ./dist",
+    "build": "tsc"
+  },
+  "files": [
+    "dist/**/*"
+  ],
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wheaney/social-freedom-types.git"
+  },
+  "keywords": [
+    "social-freedom"
+  ],
+  "author": "Wayne Heaney",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/wheaney/social-freedom/issues"
+  },
+  "homepage": "https://github.com/wheaney/social-freedom#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}

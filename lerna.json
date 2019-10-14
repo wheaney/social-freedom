@@ -1,0 +1,6 @@
+{
+  "packages": [
+    "packages/@social-freedom/*"
+  ],
+  "version": "0.0.3"
+}

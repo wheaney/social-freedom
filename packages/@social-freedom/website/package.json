@@ -1,0 +1,60 @@
+{
+  "name": "@social-freedom/website",
+  "version": "0.0.1",
+  "description": "Static front-end website for the social-freedom project",
+  "main": "index.js",
+  "files": [
+    "build/**/*"
+  ],
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "postbuild": "cp ./package.json ./build && cp ./package-lock.json ./build && cp LICENSE ./build",
+    "prepack": "npm run build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wheaney/social-freedom-website.git"
+  },
+  "keywords": [
+    "social-freedom"
+  ],
+  "author": "Wayne Heaney",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/wheaney/social-freedom/issues"
+  },
+  "homepage": "https://github.com/wheaney/social-freedom#readme",
+  "dependencies": {
+    "react": "^16.10.2",
+    "react-dom": "^16.10.2",
+    "semantic-ui-react": "^0.88.1"
+  },
+  "devDependencies": {
+    "@types/jest": "24.0.18",
+    "@types/node": "12.7.11",
+    "@types/react": "16.9.5",
+    "@types/react-dom": "16.9.1",
+    "react-scripts": "3.2.0",
+    "@social-freedom/types": "*",
+    "typescript": "3.6.3"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "build"
+  }
+}

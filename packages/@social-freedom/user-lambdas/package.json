@@ -1,0 +1,43 @@
+{
+  "name": "@social-freedom/user-lambdas",
+  "version": "0.0.2",
+  "description": "Lambda functions for the social-freedom user stack",
+  "scripts": {
+    "prebuild": "rm -rf dist",
+    "build": "tsc",
+    "postbuild": "cp ./package.json ./dist && cp ./package-lock.json ./dist && cp LICENSE ./dist",
+    "prepack": "npm run build",
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wheaney/social-freedom-user-lambdas.git"
+  },
+  "keywords": [
+    "social-freedom"
+  ],
+  "author": "LICENSE",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/wheaney/social-freedom/issues"
+  },
+  "homepage": "https://github.com/wheaney/social-freedom#readme",
+  "dependencies": {
+    "aws-sdk": "^2.547.0",
+    "uuid": "^3.3.3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.33",
+    "@types/jest": "^24.0.18",
+    "@types/uuid": "^3.4.5",
+    "aws-sdk-mock": "^4.5.0",
+    "jest": "^24.9.0",
+    "@social-freedom/types": "*",
+    "ts-jest": "^24.1.0",
+    "typescript": "^3.6.4"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist"
+  }
+}

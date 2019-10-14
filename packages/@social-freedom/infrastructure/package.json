@@ -1,0 +1,63 @@
+{
+  "name": "social-freedom",
+  "version": "0.0.1",
+  "description": "Open-source social networking framework where each user account owns their infrastructure",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest",
+    "prebuild": "rm -rf ./dist",
+    "build": "tsc",
+    "federalstackcheck": "npm run build && cdk -v -a \"ts-node src/federal/app.ts\" list",
+    "federalstackdeploy": "npm run build && cdk -v -a \"ts-node src/federal/app.ts\" deploy",
+    "userstackcheck": "npm run build && cdk -v -a \"ts-node src/user/app.ts\" list",
+    "userstackdeploy": "npm run build && cdk -v -a \"ts-node src/user/app.ts\" deploy"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wheaney/social-freedom.git"
+  },
+  "author": "Wayne Heaney",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/wheaney/social-freedom/issues"
+  },
+  "homepage": "https://github.com/wheaney/social-freedom#readme",
+  "devDependencies": {
+    "@aws-cdk/aws-apigateway": "^1.11.0",
+    "@aws-cdk/aws-cloudfront": "^1.11.0",
+    "@aws-cdk/aws-cloudtrail": "^1.11.0",
+    "@aws-cdk/aws-cloudwatch": "^1.11.0",
+    "@aws-cdk/aws-dynamodb": "^1.11.0",
+    "@aws-cdk/aws-ec2": "^1.11.0",
+    "@aws-cdk/aws-events": "^1.11.0",
+    "@aws-cdk/aws-lambda": "^1.11.0",
+    "@aws-cdk/aws-route53": "^1.11.0",
+    "@aws-cdk/aws-s3": "^1.11.0",
+    "@aws-cdk/aws-s3-deployment": "^1.11.0",
+    "@aws-cdk/aws-sns": "^1.11.0",
+    "@aws-cdk/core": "^1.11.0",
+    "@aws-cdk/cx-api": "^1.11.0",
+    "@aws-cdk/region-info": "^1.11.0",
+    "@types/jest": "^24.0.18",
+    "@types/node": "^8.10.53",
+    "aws-cdk": "^1.11.0",
+    "jest": "^24.9.0",
+    "lerna": "^3.17.0",
+    "ts-jest": "^24.0.2",
+    "ts-node": "^8.3.0",
+    "typescript": "^3.6.2"
+  },
+  "dependencies": {
+    "@social-freedom/federal-lambdas": "*",
+    "@social-freedom/types": "*",
+    "@social-freedom/user-lambdas": "*",
+    "@social-freedom/website": "*",
+    "source-map-support": "^0.5.13"
+  },
+  "engines": {
+    "node": ">= 8.10.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
