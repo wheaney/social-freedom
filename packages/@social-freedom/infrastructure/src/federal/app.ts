@@ -116,7 +116,7 @@ WebBucket.addToResourcePolicy(new PolicyStatement({
 }))
 
 new BucketDeployment(stack, 'DeployWithInvalidation', {
-    sources: [Source.asset('./node_modules/@social-freedom/website')],
+    sources: [Source.asset('./node_modules/@social-freedom/website/build')],
     destinationBucket: WebBucket,
     distribution: WebDistribution,
     distributionPaths: ['/index.html']

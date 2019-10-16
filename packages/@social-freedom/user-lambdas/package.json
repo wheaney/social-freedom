@@ -5,7 +5,7 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "tsc",
-    "postbuild": "cp ./package.json ./dist && cp ./package-lock.json ./dist && cp LICENSE ./dist",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist",
     "prepack": "npm run build",
     "test": "jest"
   },

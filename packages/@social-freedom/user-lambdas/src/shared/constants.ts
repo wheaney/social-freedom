@@ -1,5 +1,6 @@
 export const PostsTablePartitionKey = "Posts"
 export const PostActivitiesTablePartitionKey = "PostActivities"
+export const FeedTablePartitionKey = "Feed"
 
 // AccountDetails table
 export const AccountDetailsIsPublicKey = "IsPublic"

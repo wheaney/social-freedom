@@ -8,9 +8,9 @@ import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
     AccountDetailsIsPublicKey,
-    AuthTokenHeaderName
+    AuthTokenHeaderName, PostsTablePartitionKey
 } from "./constants";
-import { AccountDetails, Profile, ReducedAccountDetails } from "@social-freedom/types"
+import { AccountDetails, Profile, ReducedAccountDetails, FeedEntry } from "@social-freedom/types"
 
 // TODO - unit testing
 
@@ -243,6 +243,20 @@ const Util = {
                 ":key": {S: partitionKey}
             },
             ExclusiveStartKey: startKey
+        }).promise()
+    },
+
+    putFeedEntry: async (entry: FeedEntry) => {
+        await new AWS.DynamoDB().putItem({
+            TableName: process.env.FEED_TABLE,
+            Item: {
+                "key": {S: PostsTablePartitionKey},
+                "id": {S: entry.id},
+                "timeSortKey": {S: `${entry.timestamp}-${entry.id}`},
+                "timestamp": {N: `${entry.timestamp}`},
+                "type": {S: entry.type},
+                "body": {S: JSON.stringify(entry.body)}
+            }
         }).promise()
     }
 }

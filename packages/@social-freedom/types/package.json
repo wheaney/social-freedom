@@ -4,13 +4,12 @@
   "description": "Shared TypeScript types for the social-freedom project",
   "scripts": {
     "prebuild": "rm -rf ./dist",
-    "build": "tsc"
+    "build": "tsc",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist",
+    "prepack": "npm run build"
   },
-  "files": [
-    "dist/**/*"
-  ],
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./index.js",
+  "types": "./index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wheaney/social-freedom-types.git"
@@ -25,6 +24,7 @@
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "directory": "dist"
   }
 }

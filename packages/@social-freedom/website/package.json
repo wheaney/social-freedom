@@ -2,14 +2,9 @@
   "name": "@social-freedom/website",
   "version": "0.0.3",
   "description": "Static front-end website for the social-freedom project",
-  "main": "index.js",
-  "files": [
-    "build/**/*"
-  ],
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "postbuild": "cp ./package.json ./build && cp ./package-lock.json ./build && cp LICENSE ./build",
     "prepack": "npm run build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
@@ -26,7 +21,6 @@
   "bugs": {
     "url": "https://github.com/wheaney/social-freedom/issues"
   },
-  "homepage": "https://github.com/wheaney/social-freedom#readme",
   "dependencies": {
     "react": "^16.10.2",
     "react-dom": "^16.10.2",
@@ -54,7 +48,6 @@
     ]
   },
   "publishConfig": {
-    "access": "public",
-    "directory": "build"
+    "access": "public"
   }
 }

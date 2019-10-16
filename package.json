@@ -2,6 +2,12 @@
   "name": "social-freedom",
   "version": "0.0.1",
   "description": "Open-source social networking framework where each user account owns their infrastructure",
+  "scripts": {
+    "federalstackcheck": "cd ./packages/@social-freedom/infrastructure && npm run federalstackcheck",
+    "federalstackdeploy": "cd ./packages/@social-freedom/infrastructure && npm run federalstackdeploy",
+    "userstackcheck": "cd ./packages/@social-freedom/infrastructure && npm run userstackcheck",
+    "userstackdeploy": "cd ./packages/@social-freedom/infrastructure && npm run userstackdeploy"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/wheaney/social-freedom.git"
