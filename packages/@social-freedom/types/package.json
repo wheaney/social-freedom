@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/types",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Shared TypeScript types for the social-freedom project",
   "scripts": {
     "prebuild": "rm -rf ./dist",

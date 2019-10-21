@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/user-lambdas",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Lambda functions for the social-freedom user stack",
   "scripts": {
     "prebuild": "rm -rf dist",
@@ -26,11 +26,11 @@
     "uuid": "^3.3.3"
   },
   "devDependencies": {
-    "aws-sdk": "^2.547.0",
-    "@social-freedom/types": "^0.0.3",
+    "@social-freedom/types": "^0.0.4",
     "@types/aws-lambda": "^8.10.33",
     "@types/jest": "^24.0.18",
     "@types/uuid": "^3.4.5",
+    "aws-sdk": "^2.547.0",
     "aws-sdk-mock": "^4.5.0",
     "jest": "^24.9.0",
     "ts-jest": "^24.1.0",
