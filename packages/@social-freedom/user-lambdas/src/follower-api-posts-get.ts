@@ -1,9 +1,7 @@
 import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
-import {GetPostsRequest, GetPostsResponse, PostType, ReducedAccountDetails} from "@social-freedom/types";
-import * as AWS from "aws-sdk";
-import {AttributeMap} from "aws-sdk/clients/dynamodb";
+import {GetPostsRequest, GetPostsResponse, PostType} from "@social-freedom/types";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
@@ -47,26 +45,7 @@ export const postsGet = async (request: GetPostsRequest): Promise<GetPostsRespon
     const userIds = response.posts.map(post => post.userId).filter(userId => !request.cachedUsers || !request.cachedUsers.includes(userId))
     if (userIds.length > 0) {
         const uniqueIds = [...new Set(userIds)]
-        const usersResult = await new AWS.DynamoDB().batchGetItem({
-            RequestItems: {
-                [process.env.TRACKED_ACCOUNTS_TABLE]: {
-                    Keys: uniqueIds.map(userId => ({
-                        userId: {S: userId}
-                    }))
-                }
-            }
-        }).promise()
-        response.users = usersResult.Responses[process.env.TRACKED_ACCOUNTS_TABLE].reduce((acc: { [userId: string]: ReducedAccountDetails }, current: AttributeMap) => {
-            const accountDetails = {
-                userId: current['userId'].S,
-                apiOrigin: current['apiOrigin'].S,
-                name: current['name'].S,
-                photoUrl: current['photoUrl'] ? current['photoUrl'].S : undefined
-            }
-            acc[accountDetails.userId] = accountDetails
-
-            return acc
-        }, {})
+        response.users = await Util.getTrackedAccounts(uniqueIds)
     }
 
     return response

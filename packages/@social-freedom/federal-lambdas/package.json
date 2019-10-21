@@ -5,7 +5,7 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "tsc",
-    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cd ./dist && npm install --production",
     "prepack": "npm run build",
     "test": "jest"
   },
@@ -22,10 +22,8 @@
     "url": "https://github.com/wheaney/social-freedom/issues"
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
-  "dependencies": {
-    "aws-sdk": "^2.547.0"
-  },
   "devDependencies": {
+    "aws-sdk": "^2.547.0",
     "@babel/core": "^7.0.0",
     "@social-freedom/types": "^0.0.3",
     "@types/aws-lambda": "^8.10.33",

@@ -13,7 +13,7 @@ export type BasicPostDetails = {
     mediaUrl?: string
 }
 
-export type FullPostDetails = BasicPostDetails & {
+export type PostDetails = BasicPostDetails & {
     id: string,
     timestamp: number
 }
@@ -25,6 +25,6 @@ export type GetPostsRequest = {
 
 export type GetPostsResponse = {
     users: { [userId: string]: ReducedAccountDetails },
-    posts: FullPostDetails[],
+    posts: PostDetails[],
     lastPostKey: string
 }

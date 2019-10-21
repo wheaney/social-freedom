@@ -11,7 +11,7 @@ import {
 import {AttributeType, BillingMode, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
-import {Topic} from "@aws-cdk/aws-sns";
+import {Subscription, SubscriptionProtocol, Topic} from "@aws-cdk/aws-sns";
 import {Code, Function as LambdaFunction} from "@aws-cdk/aws-lambda";
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
 import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
@@ -170,7 +170,18 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(InternalApi, 'follow-request', 'POST', 'internal-api-follow-request-create')
         ApiUtils.constructLambdaApi(InternalApi, 'follow-request-response', 'POST', 'internal-api-follow-request-respond')
         ApiUtils.constructLambdaApi(InternalApi, 'posts', 'POST', 'internal-api-post-create')
+        ApiUtils.constructLambdaApi(InternalApi, 'feed', 'GET', 'internal-api-feed-get')
 
+        const PostEventHandler = LambdaUtils.constructLambda('sns-handle-following-account-post-event')
+        PostEventHandler.addPermission('PostEventHandlerLambaPermission', {
+            action: 'lambda:InvokeFunction',
+            principal: new ServicePrincipal("sns.amazonaws.com")
+        })
+        new Subscription(this, 'PostsTopicLambdaSubscription', {
+            endpoint: PostEventHandler.functionArn,
+            topic: PostsTopic,
+            protocol: SubscriptionProtocol.LAMBDA
+        })
         this.constructSnsTopicSubscriptionValidation(LambdaUtils.constructLambda('sns-audit-new-sns-subscription'))
     }
 
@@ -256,7 +267,7 @@ export class UserStack extends cdk.Stack {
             }]
         })
 
-        validationLambda.addPermission('SnsSubscriptionValidationLambaPermission', {
+        validationLambda.addPermission('SnsSubscriptionValidationLambdaPermission', {
             action: 'lambda:InvokeFunction',
             principal: new ServicePrincipal("events.amazonaws.com")
         })

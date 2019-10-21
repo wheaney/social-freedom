@@ -1,13 +1,13 @@
 import * as React from 'react'
 import {Component} from 'react'
-import {FullPostDetails, ReducedAccountDetails} from "@social-freedom/types";
+import {FeedEntry, GetFeedResponse, ReducedAccountDetails} from "@social-freedom/types";
 import {Container, Feed, Form, Loader} from "semantic-ui-react";
 import {AuthContext} from "./AuthContext";
 import Auth from "../services/auth";
 
 type State = {
     loading: boolean,
-    posts: FullPostDetails[],
+    entries: FeedEntry[],
     users: {[userId: string]: ReducedAccountDetails},
     postBody: string,
     postBodyError?: boolean,
@@ -22,7 +22,7 @@ export default class NewsFeed extends Component<any, State> {
         super(props, state)
         this.state = {
             loading: true,
-            posts: [],
+            entries: [],
             users: {},
             postBody: ''
         }
@@ -39,18 +39,18 @@ export default class NewsFeed extends Component<any, State> {
 
         // @ts-ignore
         const apiOrigin = this.context.accountIdentifiers.apiOrigin
-        const response = await fetch(`${apiOrigin}/prod/follower/posts`, {
+        const response = await fetch(`${apiOrigin}/prod/internal/feed`, {
             headers: {
                 'Authorization': Auth.getAuthToken()
             }
         })
-        const responseJson = await response.json()
+        const result:GetFeedResponse = await response.json()
         this.setState({
             loading: false,
-            posts: responseJson.posts,
+            entries: result.entries,
             users: {
                 ...this.state.users,
-                ...responseJson.users
+                ...result.users
             }
         })
     }
@@ -107,18 +107,18 @@ export default class NewsFeed extends Component<any, State> {
             </Form>
             {this.state.loading && <Loader active /> ||
             <Feed>
-                {this.state.posts.map(post => {
-                    const user = this.state.users[post.userId]
-                    return <Feed.Event key={post.id}>
+                {this.state.entries.map(entry => {
+                    const user = this.state.users[entry.userId]
+                    return <Feed.Event key={entry.id}>
                         <Feed.Label>
                             <img src={user.photoUrl} />
                         </Feed.Label>
                         <Feed.Content>
                             <Feed.Summary>
                                 <Feed.User>{user.name}</Feed.User> posted
-                                <Feed.Date>{new Date(post.timestamp).toDateString()}</Feed.Date>
+                                <Feed.Date>{new Date(entry.timestamp).toDateString()}</Feed.Date>
                             </Feed.Summary>
-                            {post.body}
+                            {entry.body.body}
                         </Feed.Content>
                     </Feed.Event>
                 })}

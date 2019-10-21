@@ -1,5 +1,5 @@
 import {SNSEvent} from "aws-lambda";
-import {BasicFeedBody} from "@social-freedom/types";
+import {FeedEntry} from "@social-freedom/types";
 import Util from "./shared/util";
 
 export const handler = async (event:SNSEvent) => {
@@ -8,14 +8,9 @@ export const handler = async (event:SNSEvent) => {
     }))
 };
 
-export const feedEntryCreate = async (post: BasicFeedBody) => {
+export const feedEntryCreate = async (feedEntry: FeedEntry) => {
     // we only care about this if we follow the account that triggered it
-    if (await Util.isFollowing(post.userId)) {
-        await Util.putFeedEntry({
-            id: post.id,
-            timestamp: post.timestamp,
-            type: 'Post',
-            body: post
-        })
+    if (await Util.isFollowing(feedEntry.body.userId)) {
+        await Util.putFeedEntry(feedEntry)
     }
 }

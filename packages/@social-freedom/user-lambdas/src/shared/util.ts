@@ -1,5 +1,5 @@
 import {PromiseResult} from "aws-sdk/lib/request";
-import {GetItemOutput, Key} from "aws-sdk/clients/dynamodb";
+import {AttributeMap, GetItemOutput, Key} from "aws-sdk/clients/dynamodb";
 import * as AWS from "aws-sdk";
 import {AWSError} from "aws-sdk";
 import {APIGatewayEvent} from "aws-lambda";
@@ -8,9 +8,10 @@ import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
     AccountDetailsIsPublicKey,
-    AuthTokenHeaderName, PostsTablePartitionKey
+    AuthTokenHeaderName,
+    FeedTablePartitionKey
 } from "./constants";
-import { AccountDetails, Profile, ReducedAccountDetails, FeedEntry } from "@social-freedom/types"
+import {AccountDetails, FeedEntry, Profile, ReducedAccountDetails} from "@social-freedom/types"
 
 // TODO - unit testing
 
@@ -31,8 +32,7 @@ const Util = {
     },
 
     followerAPIIdentityCheck: async (event: APIGatewayEvent): Promise<void> => {
-        if (!await Util.isFollower(Util.getUserId(event)) &&
-                process.env.USER_ID !== Util.getUserId(event)) {
+        if (!await Util.isFollower(Util.getUserId(event))) {
             throw new Error(`Unauthorized userId: ${Util.getUserId(event)}`)
         }
     },
@@ -67,11 +67,11 @@ const Util = {
     },
 
     isFollower: async (userId: string): Promise<boolean> => {
-        return await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, userId)
+        return process.env.USER_ID === userId || await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, userId)
     },
 
     isFollowing: async (userId: string): Promise<boolean> => {
-        return await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, userId)
+        return process.env.USER_ID === userId || await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, userId)
     },
 
     apiRequest: async (hostname: string, path: string, authToken: string,
@@ -250,14 +250,40 @@ const Util = {
         await new AWS.DynamoDB().putItem({
             TableName: process.env.FEED_TABLE,
             Item: {
-                "key": {S: PostsTablePartitionKey},
+                "key": {S: FeedTablePartitionKey},
                 "id": {S: entry.id},
                 "timeSortKey": {S: `${entry.timestamp}-${entry.id}`},
                 "timestamp": {N: `${entry.timestamp}`},
                 "type": {S: entry.type},
+                "operation": {S: entry.operation},
+                "userId": {S: entry.userId},
                 "body": {S: JSON.stringify(entry.body)}
             }
         }).promise()
+    },
+
+    getTrackedAccounts: async (uniqueUserIds: string[]):Promise<{[userId:string]: ReducedAccountDetails}> => {
+        const usersResult = await new AWS.DynamoDB().batchGetItem({
+            RequestItems: {
+                [process.env.TRACKED_ACCOUNTS_TABLE]: {
+                    Keys: uniqueUserIds.map(userId => ({
+                        userId: {S: userId}
+                    }))
+                }
+            }
+        }).promise()
+
+        return usersResult.Responses[process.env.TRACKED_ACCOUNTS_TABLE].reduce((acc: { [userId: string]: ReducedAccountDetails }, current: AttributeMap) => {
+            const accountDetails = {
+                userId: current['userId'].S,
+                apiOrigin: current['apiOrigin'].S,
+                name: current['name'].S,
+                photoUrl: current['photoUrl'] ? current['photoUrl'].S : undefined
+            }
+            acc[accountDetails.userId] = accountDetails
+
+            return acc
+        }, {})
     }
 }
 
