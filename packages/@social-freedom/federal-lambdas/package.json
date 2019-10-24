@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/federal-lambdas",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Lambda functions for the social-freedom federal stack",
   "scripts": {
     "prebuild": "rm -rf dist",
@@ -24,7 +24,7 @@
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "devDependencies": {
     "@babel/core": "^7.0.0",
-    "@social-freedom/types": "^0.0.4",
+    "@social-freedom/types": "^0.0.5",
     "@types/aws-lambda": "^8.10.33",
     "@types/jest": "^24.0.18",
     "@types/node": "^12.7.12",
