@@ -1,6 +1,6 @@
 import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
-import {FollowRequestResponse} from "@social-freedom/types";
+import {FollowRequestResponse} from "@social-freedom/types"
 import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} from "./shared/constants";
 
 export const handler = async (event:APIGatewayEvent) => {
@@ -20,8 +20,11 @@ export const followRequestReceiveResponse = async (response: FollowRequestRespon
     await Util.removeFromDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, response.accountDetails.userId)
 
     if (response.accepted) {
-        await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, response.accountDetails.userId)
-        await Util.putTrackedAccountDetails(response.accountDetails)
-        await Util.subscribeToProfileUpdates(response.accountDetails)
+        await Promise.all([
+            Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, response.accountDetails.userId),
+            Util.putTrackedAccount(response.accountDetails),
+            Util.subscribeToProfileEvents(response.accountDetails),
+            Util.subscribeToPostEvents(response.accountDetails)
+        ])
     }
 }

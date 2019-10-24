@@ -17,10 +17,6 @@ export const handler = async (event:APIGatewayEvent) => {
 };
 
 export const putPost = async (post:PostDetails) => {
-    const awsAccountId = process.env.ACCOUNT_ID
-    const awsRegion = process.env.REGION
-    const userId = process.env.USER_ID
-
     // Add post to DynamoDB "posts" table
     const timestamp:number = new Date(Date.now()).getTime()
     post.id = post.id || uuid.v1()
@@ -44,11 +40,11 @@ export const putPost = async (post:PostDetails) => {
         timestamp: timestamp,
         type: 'Post',
         operation: 'Create',
-        userId: userId,
+        userId: process.env.USER_ID,
         body: post
     }
     await new AWS.SNS().publish({
-        TopicArn: `arn:aws:sns:${awsRegion}:${awsAccountId}:Posts-${userId}`,
+        TopicArn: process.env.POSTS_TOPIC,
         Message: JSON.stringify(feedEntry)
     }).promise()
 }

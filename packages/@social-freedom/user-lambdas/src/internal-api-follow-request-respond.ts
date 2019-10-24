@@ -8,7 +8,10 @@ export const handler = async (event: APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
         Util.internalAPIIdentityCheck(event)
 
-        await internalFollowRequestRespond(Util.getAuthToken(event), JSON.parse(event.body))
+        await internalFollowRequestRespond(Util.getAuthToken(event), {
+            ...JSON.parse(event.body),
+            userId: Util.getUserId(event)
+        })
     })
 };
 
@@ -28,16 +31,12 @@ export const internalFollowRequestRespond = async (cognitoAuthToken: string, res
             // TODO - unsubscribe from SNS topic
         }
 
-        const requestApiDomain: string = requesterDetails.identifiers.apiOrigin
-        await Util.apiRequest(requestApiDomain, '/follower/follow-request-response', cognitoAuthToken,
+        await Util.apiRequest(requesterDetails.apiOrigin, '/follower/follow-request-response', cognitoAuthToken,
             'POST', followerApiResponsePayload)
 
         // if this account isn't public and we're not already following, request to follow them
         if (response.accepted && !await Util.isAccountPublic() && !await Util.isFollowing(response.userId) ) {
-            await internalFollowRequestCreate(cognitoAuthToken, {
-                userId: response.userId,
-                ...requesterDetails
-            }, followerApiResponsePayload['accountDetails'])
+            await internalFollowRequestCreate(cognitoAuthToken, requesterDetails, followerApiResponsePayload['accountDetails'])
         }
 
         // Remove the follow request from the list of received requests

@@ -40,6 +40,10 @@ type State = {
     regionError?: boolean,
     apiOrigin?: string,
     apiOriginError?: boolean,
+    postsTopicArn?: string,
+    postsTopicArnError?: boolean,
+    profileTopicArn?: string,
+    profileTopicArnError?: boolean,
     submitSuccess?: boolean,
     submitError?: boolean
 }
@@ -49,11 +53,20 @@ export default class AccountRegistration extends Component<Properties, State> {
 
     constructor(props: Properties, state: State) {
         super(props, state)
-        this.state = this.context && this.context.accountIdentifiers ? {
-            accountId: this.context.accountIdentifiers.accountId || '',
-            region: this.context.accountIdentifiers.region || '',
-            apiOrigin: this.context.accountIdentifiers.apiOrigin || ''
-        } : {}
+        this.state = {}
+    }
+
+    componentDidMount(): void {
+        if (this.context && this.context.accountIdentifiers) {
+            this.setState({
+                accountId: this.context.accountIdentifiers.accountId || '',
+                region: this.context.accountIdentifiers.region || '',
+                apiOrigin: this.context.accountIdentifiers.apiOrigin || '',
+                postsTopicArn: this.context.accountIdentifiers.postsTopicArn || '',
+                profileTopicArn: this.context.accountIdentifiers.profileTopicArn || ''
+            })
+        }
+
     }
 
     handleChange = (e: any, data: { [key: string]: any }) => {
@@ -68,15 +81,20 @@ export default class AccountRegistration extends Component<Properties, State> {
         stateUpdate.accountIdError = !this.state.accountId
         stateUpdate.regionError = !this.state.region
         stateUpdate.apiOriginError = !this.state.apiOrigin
+        stateUpdate.postsTopicArnError = !this.state.postsTopicArn
+        stateUpdate.profileTopicArnError = !this.state.profileTopicArn
         this.setState(stateUpdate)
 
-        if (!stateUpdate.accountIdError && !stateUpdate.regionError && !stateUpdate.apiOriginError) {
+        if (!stateUpdate.accountIdError && !stateUpdate.regionError && !stateUpdate.apiOriginError &&
+            !stateUpdate.postsTopicArnError && !stateUpdate.profileTopicArnError) {
             fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/prod/register`, {
                 method: 'POST',
                 body: JSON.stringify({
                     accountId: this.state.accountId,
                     region: this.state.region,
-                    apiOrigin: this.state.apiOrigin
+                    apiOrigin: this.state.apiOrigin,
+                    postsTopicArn: this.state.postsTopicArn,
+                    profileTopicArn: this.state.profileTopicArn
                 }),
                 headers: {
                     'Authorization': Auth.getAuthToken()
@@ -157,7 +175,7 @@ export default class AccountRegistration extends Component<Properties, State> {
                         </Segment>
                     </List.Item>
                     <List.Item>
-                        Note the <b>UserStack.APIEndpoint</b> output variable at the end of the deployment, then fill
+                        Note the <b>APIEndpoint</b>, <b>PostsTopic</b>, and <b>ProfileTopicARN</b> output variables at the end of the deployment, then fill
                         out the form below.
                     </List.Item>
                 </List>
@@ -173,6 +191,12 @@ export default class AccountRegistration extends Component<Properties, State> {
                 <Form.Input label="Account API Origin" name='apiOrigin' value={this.state.apiOrigin}
                             placeholder="Output from user stack CDK deployment" required
                             onChange={this.handleChange} error={this.state.apiOriginError}/>
+                <Form.Input label="Posts SNS Topic ARN" name='postsTopicArn' value={this.state.postsTopicArn}
+                            placeholder="Output from user stack CDK deployment" required
+                            onChange={this.handleChange} error={this.state.postsTopicArnError}/>
+                <Form.Input label="Profile SNS Topic ARN" name='profileTopicArn' value={this.state.profileTopicArn}
+                            placeholder="Output from user stack CDK deployment" required
+                            onChange={this.handleChange} error={this.state.profileTopicArnError}/>
                 <Form.Button onClick={this.submitForm}>Register</Form.Button>
             </Form>
         </Container>

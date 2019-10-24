@@ -39,7 +39,12 @@ export default class NewsFeed extends Component<any, State> {
 
         // @ts-ignore
         const apiOrigin = this.context.accountIdentifiers.apiOrigin
-        const response = await fetch(`${apiOrigin}/prod/internal/feed`, {
+        const cachedUsers = Object.keys(this.state.users)
+        let feedRequestParams = ''
+        if (cachedUsers.length > 0) {
+            feedRequestParams = `?cachedUsers=${cachedUsers.join(',')}`
+        }
+        const response = await fetch(`${apiOrigin}/prod/internal/feed${feedRequestParams}`, {
             headers: {
                 'Authorization': Auth.getAuthToken()
             }

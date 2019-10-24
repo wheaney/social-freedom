@@ -21,8 +21,8 @@ export const followRequestCreate = async (cognitoAuthToken: string, request:Foll
      */
 
     await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, request.userId)
-    await Util.putTrackedAccountDetails(request)
-    await Util.subscribeToProfileUpdates(request)
+    await Util.putTrackedAccount(request)
+    await Util.subscribeToProfileEvents(request)
 
     // TODO - implement auto-denied condition (e.g. blocked account)
     const autoDenied = false

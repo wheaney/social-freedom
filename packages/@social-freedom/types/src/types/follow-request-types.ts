@@ -1,11 +1,11 @@
-import {AccountDetails} from "./account-types";
+import {ReducedAccountDetails} from "./account-types";
 
-export type FollowRequest = AccountDetails
+export type FollowRequest = ReducedAccountDetails
 export type InternalFollowResponse = {
     userId: string,
     accepted: boolean
 }
 export type FollowRequestResponse = {
     accepted: boolean,
-    accountDetails?: AccountDetails
+    accountDetails?: ReducedAccountDetails
 }

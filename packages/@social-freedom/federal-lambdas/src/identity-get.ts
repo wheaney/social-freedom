@@ -3,11 +3,12 @@ import Util from "./shared/util";
 import * as AWS from 'aws-sdk'
 import {AuthDetails} from "@social-freedom/types";
 
+const requiredFields = ['apiOrigin', 'postsTopicArn', 'profileTopicArn']
 export const handler = async (event:APIGatewayEvent) => {
     return Util.apiGatewayProxyWrapper(async () => {
         const claim = event.requestContext.authorizer.claims
         const identifiers = await getAccountIdentifiers(Util.getUserId(event))
-        const isRegistered = !!identifiers && !!identifiers['apiOrigin'] && !!identifiers['apiOrigin'].S
+        const isRegistered = !!identifiers && !requiredFields.find(field => !identifiers[field] || !identifiers[field].S)
         return {
             isAuthenticated: true,
             identity: {
@@ -21,7 +22,9 @@ export const handler = async (event:APIGatewayEvent) => {
             accountIdentifiers: {
                 accountId: !!identifiers && !!identifiers['accountId'] ? identifiers['accountId'].S : undefined,
                 region: !!identifiers && !!identifiers['region'] ? identifiers['region'].S : undefined,
-                apiOrigin: !!identifiers && !!identifiers['apiOrigin'] ? identifiers['apiOrigin'].S : undefined
+                apiOrigin: !!identifiers && !!identifiers['apiOrigin'] ? identifiers['apiOrigin'].S : undefined,
+                postsTopicArn: !!identifiers && !!identifiers['postsTopicArn'] ? identifiers['postsTopicArn'].S : undefined,
+                profileTopicArn: !!identifiers && !!identifiers['profileTopicArn'] ? identifiers['profileTopicArn'].S : undefined
             }
         } as AuthDetails
     })

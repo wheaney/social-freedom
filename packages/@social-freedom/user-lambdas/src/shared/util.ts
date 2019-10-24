@@ -11,7 +11,7 @@ import {
     AuthTokenHeaderName,
     FeedTablePartitionKey
 } from "./constants";
-import {AccountDetails, FeedEntry, Profile, ReducedAccountDetails} from "@social-freedom/types"
+import {FeedEntry, Profile, ReducedAccountDetails} from "@social-freedom/types";
 
 // TODO - unit testing
 
@@ -116,7 +116,7 @@ const Util = {
         req.end();
     },
 
-    getTrackedAccountDetails: async (userId: string): Promise<AccountDetails> => {
+    getTrackedAccountDetails: async (userId: string): Promise<ReducedAccountDetails> => {
         const requesterDetailsItem = (await new AWS.DynamoDB().getItem({
             TableName: process.env.TRACKED_ACCOUNTS_TABLE,
             Key: {
@@ -126,12 +126,12 @@ const Util = {
 
         if (!!requesterDetailsItem) {
             return {
-                identifiers: {
-                    accountId: requesterDetailsItem["identifiers"].M["accountId"].S,
-                    region: requesterDetailsItem["identifiers"].M["region"].S,
-                    apiOrigin: requesterDetailsItem["identifiers"].M["apiOrigin"].S,
-                },
-                profile: JSON.parse(requesterDetailsItem["profile"].S)
+                userId: requesterDetailsItem['userId'].S,
+                apiOrigin: requesterDetailsItem['apiOrigin'].S,
+                postsTopicArn: requesterDetailsItem['postsTopicArn'].S,
+                profileTopicArn: requesterDetailsItem['profileTopicArn'].S,
+                name: requesterDetailsItem['name'].S,
+                photoUrl: requesterDetailsItem['photoUrl'] ? requesterDetailsItem['photoUrl'].S : undefined
             }
         } else {
             return undefined
@@ -195,18 +195,11 @@ const Util = {
         return {
             userId: process.env.USER_ID,
             apiOrigin: process.env.API_ORIGIN,
+            postsTopicArn: process.env.POSTS_TOPIC,
+            profileTopicArn: process.env.PROFILE_TOPIC,
             name: profile.name,
             photoUrl: profile.photoUrl
         }
-    },
-
-    putTrackedAccountDetails: async (accountDetails: AccountDetails) => {
-        await Util.putTrackedAccount({
-            userId: accountDetails.userId,
-            apiOrigin: accountDetails.identifiers.apiOrigin,
-            name: accountDetails.profile.name,
-            photoUrl: accountDetails.profile.photoUrl
-        })
     },
 
     putTrackedAccount: async (trackedAccount: ReducedAccountDetails) => {
@@ -215,16 +208,26 @@ const Util = {
             Item: {
                 userId: {S: trackedAccount.userId},
                 apiOrigin: {S: trackedAccount.apiOrigin},
+                postsTopicArn: {S: trackedAccount.postsTopicArn},
+                profileTopicArn: {S: trackedAccount.profileTopicArn},
                 name: {S: trackedAccount.name},
                 photoUrl: {S: trackedAccount.photoUrl}
             }
         }).promise()
     },
 
-    subscribeToProfileUpdates: async (account: AccountDetails) => {
-        return await new AWS.SNS().subscribe({
-            TopicArn: `arn:aws:sns:${account.identifiers.region}:${account.identifiers.accountId}:ProfileUpdates-${account.userId}`,
-            Endpoint: process.env.PROFILE_UPDATE_HANDLER,
+    subscribeToProfileEvents: async (account: ReducedAccountDetails) => {
+        await new AWS.SNS().subscribe({
+            TopicArn: account.profileTopicArn,
+            Endpoint: process.env.PROFILE_EVENTS_HANDLER,
+            Protocol: 'lambda'
+        }).promise()
+    },
+
+    subscribeToPostEvents: async (account: ReducedAccountDetails) => {
+        await new AWS.SNS().subscribe({
+            TopicArn: account.postsTopicArn,
+            Endpoint: process.env.POST_EVENTS_HANDLER,
             Protocol: 'lambda'
         }).promise()
     },
@@ -277,6 +280,8 @@ const Util = {
             const accountDetails = {
                 userId: current['userId'].S,
                 apiOrigin: current['apiOrigin'].S,
+                postsTopicArn: current['postsTopicArn'].S,
+                profileTopicArn: current['profileTopicArn'].S,
                 name: current['name'].S,
                 photoUrl: current['photoUrl'] ? current['photoUrl'].S : undefined
             }

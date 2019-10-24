@@ -31,7 +31,7 @@ describe("the subscribeToProfileUpdates function", () => {
             callback(null, {});
         })
 
-        await Util.subscribeToProfileUpdates(FollowingAccountDetailsFull)
+        await Util.subscribeToProfileEvents(FollowingAccountDetailsFull)
 
         AWSMock.restore('SNS')
     })

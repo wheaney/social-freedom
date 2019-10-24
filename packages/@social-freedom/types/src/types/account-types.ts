@@ -9,12 +9,16 @@ export type Profile = {
 export type BasicAccountIdentifiers = {
     accountId: string,
     region: string,
-    apiOrigin?: string
+    apiOrigin?: string,
+    profileTopicArn?: string,
+    postsTopicArn?: string
 }
-export type AccountRegistrationEvent = BasicAccountIdentifiers
+export type RegisterAccountRequest = BasicAccountIdentifiers
 
 export type AccountIdentifiers = BasicAccountIdentifiers & {
     apiOrigin: string,
+    profileTopicArn: string,
+    postsTopicArn: string
 }
 
 export type AccountDetails = {
@@ -27,7 +31,9 @@ export type ReducedAccountDetails = {
     userId: string,
     name: string,
     photoUrl?: string,
-    apiOrigin: string
+    apiOrigin: string,
+    profileTopicArn: string,
+    postsTopicArn: string
 }
 
 type PublicSearchField = "name" | "phone" | "email"

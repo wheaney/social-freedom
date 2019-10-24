@@ -15,8 +15,8 @@ export const internalFollowRequestCreate = async (cognitoAuthToken: string, requ
     await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, request.userId)
 
     // we can't subscribe to profile updates yet, but we can at least store what we know about this account
-    await Util.putTrackedAccountDetails(request)
+    await Util.putTrackedAccount(request)
 
-    await Util.apiRequest(request.identifiers.apiOrigin, '/follower/follow-request-create',
+    await Util.apiRequest(request.apiOrigin, '/follower/follow-request-create',
         cognitoAuthToken, 'POST', thisAccountDetails || await Util.getThisAccountDetails())
 }

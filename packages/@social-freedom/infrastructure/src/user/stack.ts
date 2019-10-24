@@ -1,5 +1,5 @@
 import * as cdk from "@aws-cdk/core";
-import {Duration, RemovalPolicy} from "@aws-cdk/core";
+import {CfnOutput, Duration, RemovalPolicy} from "@aws-cdk/core";
 import {
     AnyPrincipal,
     CanonicalUserPrincipal,
@@ -57,22 +57,8 @@ export class UserStack extends cdk.Stack {
         const PostsTable = this.buildSortTable("Posts", "key")
         const PostActivitiesTable = this.buildSortTable("PostActivities", "postId")
 
-        const ProfileUpdatesTopic = new Topic(this, 'ProfileUpdatesTopic', {
-            topicName: `ProfileUpdates-${userId}`
-        })
-        ProfileUpdatesTopic.addToResourcePolicy(new PolicyStatement({
-            principals: [new AnyPrincipal()], // SNS subscription validation lambda will remove anyone that shouldn't subscribe
-            actions: ['sns:Subscribe'],
-            resources: [ProfileUpdatesTopic.topicArn]
-        }))
-        const PostsTopic = new Topic(this, "PostsTopic", {
-            topicName: `Posts-${userId}`
-        })
-        PostsTopic.addToResourcePolicy(new PolicyStatement({
-            principals: [new AnyPrincipal()], // SNS subscription validation lambda will remove anyone that shouldn't subscribe
-            actions: ['sns:Subscribe'],
-            resources: [PostsTopic.topicArn]
-        }))
+        const ProfileTopic = this.createTopic('ProfileTopic')
+        const PostsTopic = this.createTopic('PostsTopic')
 
         const MediaBucket = new Bucket(this, "MediaBucket", {
             removalPolicy: this.removalPolicy
@@ -112,7 +98,7 @@ export class UserStack extends cdk.Stack {
             actions: ['dynamodb:Query']
         }));
         ExecutionerRole.addToPolicy(new PolicyStatement({
-            resources: [PostsTopic.topicArn, ProfileUpdatesTopic.topicArn],
+            resources: [PostsTopic.topicArn, ProfileTopic.topicArn],
             actions: ['sns:Publish']
         }));
 
@@ -136,8 +122,10 @@ export class UserStack extends cdk.Stack {
             ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
             REGION: cdk.Aws.REGION,
             ACCOUNT_DETAILS_TABLE: AccountDetailsTable.tableName,
+            PROFILE_TOPIC: ProfileTopic.topicArn,
             FEED_TABLE: FeedTable.tableName,
             POSTS_TABLE: PostsTable.tableName,
+            POSTS_TOPIC: PostsTopic.topicArn,
             POST_ACTIVITIES_TABLE: PostActivitiesTable.tableName,
             TRACKED_ACCOUNTS_TABLE: TrackedAccounts.tableName,
             MEDIA_BUCKET: MediaBucket.bucketName,
@@ -147,11 +135,23 @@ export class UserStack extends cdk.Stack {
         }
 
         const LambdaCode = Code.fromAsset('./node_modules/@social-freedom/user-lambdas')
-        const ProfileUpdateHandler = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode).constructLambda('sns-tracked-account-profile-updated')
+        const TempLambdaUtils = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode)
+        const ProfileEventsHandler = TempLambdaUtils.constructLambda('sns-handle-following-account-profile-events')
+        const PostEventsHandler = TempLambdaUtils.constructLambda('sns-handle-following-account-post-events')
+        PostEventsHandler.addPermission('PostEventHandlerLambaPermission', {
+            action: 'lambda:InvokeFunction',
+            principal: new ServicePrincipal("sns.amazonaws.com")
+        })
+        new Subscription(this, 'PostsTopicLambdaSubscription', {
+            endpoint: PostEventsHandler.functionArn,
+            topic: PostsTopic,
+            protocol: SubscriptionProtocol.LAMBDA
+        })
 
         const LambdaUtils = new LambdaHelper(this, ExecutionerRole, {
             ...EnvironmentVariables,
-            PROFILE_UPDATE_HANDLER: ProfileUpdateHandler.functionArn
+            PROFILE_EVENTS_HANDLER: ProfileEventsHandler.functionArn,
+            POST_EVENTS_HANDLER: PostEventsHandler.functionArn
         }, LambdaCode)
         const ApiUtils = new ApiHelper(LambdaUtils, CognitoAuthorizer, isDevelopment ? '*' : federalWebsiteOrigin)
 
@@ -172,16 +172,6 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(InternalApi, 'posts', 'POST', 'internal-api-post-create')
         ApiUtils.constructLambdaApi(InternalApi, 'feed', 'GET', 'internal-api-feed-get')
 
-        const PostEventHandler = LambdaUtils.constructLambda('sns-handle-following-account-post-event')
-        PostEventHandler.addPermission('PostEventHandlerLambaPermission', {
-            action: 'lambda:InvokeFunction',
-            principal: new ServicePrincipal("sns.amazonaws.com")
-        })
-        new Subscription(this, 'PostsTopicLambdaSubscription', {
-            endpoint: PostEventHandler.functionArn,
-            topic: PostsTopic,
-            protocol: SubscriptionProtocol.LAMBDA
-        })
         this.constructSnsTopicSubscriptionValidation(LambdaUtils.constructLambda('sns-audit-new-sns-subscription'))
     }
 
@@ -275,5 +265,20 @@ export class UserStack extends cdk.Stack {
 
     indexArn(table: Table, indexName: string) {
         return `${table.tableArn}/index/${indexName}`
+    }
+
+    createTopic(id: string) {
+        const topic = new Topic(this, id)
+        topic.addToResourcePolicy(new PolicyStatement({
+            principals: [new AnyPrincipal()], // SNS subscription validation lambda will remove anyone that shouldn't subscribe
+            actions: ['sns:Subscribe'],
+            resources: [topic.topicArn]
+        }))
+        new CfnOutput(this, `${id}Output`, {
+            value: topic.topicArn,
+            exportName: `${id}ARN`
+        })
+
+        return topic
     }
 }
