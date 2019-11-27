@@ -2,5 +2,5 @@
   "packages": [
     "packages/@social-freedom/*"
   ],
-  "version": "0.0.5"
+  "version": "0.0.6"
 }

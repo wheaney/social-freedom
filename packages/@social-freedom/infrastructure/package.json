@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/infrastructure",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Open-source social networking framework where each user account owns their infrastructure",
   "main": "index.js",
   "scripts": {
@@ -29,8 +29,8 @@
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "devDependencies": {
     "@aws-cdk/aws-apigateway": "^1.13.0",
-    "@aws-cdk/aws-cloudfront": "^1.13.0",
     "@aws-cdk/aws-cloudformation": "^1.13.0",
+    "@aws-cdk/aws-cloudfront": "^1.13.0",
     "@aws-cdk/aws-cloudtrail": "^1.13.0",
     "@aws-cdk/aws-cloudwatch": "^1.13.0",
     "@aws-cdk/aws-dynamodb": "^1.13.0",
@@ -54,9 +54,9 @@
     "typescript": "^3.6.2"
   },
   "dependencies": {
-    "@social-freedom/federal-lambdas": "^0.0.5",
-    "@social-freedom/user-lambdas": "^0.0.5",
-    "@social-freedom/website": "^0.0.5",
+    "@social-freedom/federal-lambdas": "^0.0.6",
+    "@social-freedom/user-lambdas": "^0.0.6",
+    "@social-freedom/website": "^0.0.6",
     "source-map-support": "^0.5.13"
   },
   "engines": {
