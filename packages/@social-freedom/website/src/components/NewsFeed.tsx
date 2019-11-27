@@ -1,9 +1,11 @@
 import * as React from 'react'
 import {Component} from 'react'
-import {FeedEntry, GetFeedResponse, ReducedAccountDetails} from "@social-freedom/types";
-import {Container, Feed, Form, Loader} from "semantic-ui-react";
+import {FeedEntry, ReducedAccountDetails} from "@social-freedom/types";
+import {Container, Feed, Form, Header, Loader} from "semantic-ui-react";
 import {AuthContext} from "./AuthContext";
-import Auth from "../services/auth";
+import Posts from "../services/Posts";
+import {default as FeedService} from "../services/Feed";
+import FollowRequestForm from "./FollowRequestForm";
 
 type State = {
     loading: boolean,
@@ -26,13 +28,15 @@ export default class NewsFeed extends Component<any, State> {
             users: {},
             postBody: ''
         }
+
+        this.handleChange = this.handleChange.bind(this)
     }
 
     async componentDidMount() {
-        await this.refreshPosts()
+        await this.refreshFeed()
     }
 
-    async refreshPosts() {
+    async refreshFeed() {
         this.setState({
             loading: true
         })
@@ -40,16 +44,7 @@ export default class NewsFeed extends Component<any, State> {
         // @ts-ignore
         const apiOrigin = this.context.accountIdentifiers.apiOrigin
         const cachedUsers = Object.keys(this.state.users)
-        let feedRequestParams = ''
-        if (cachedUsers.length > 0) {
-            feedRequestParams = `?cachedUsers=${cachedUsers.join(',')}`
-        }
-        const response = await fetch(`${apiOrigin}/prod/internal/feed${feedRequestParams}`, {
-            headers: {
-                'Authorization': Auth.getAuthToken()
-            }
-        })
-        const result:GetFeedResponse = await response.json()
+        const result = await FeedService.getFeed(apiOrigin, cachedUsers)
         this.setState({
             loading: false,
             entries: result.entries,
@@ -60,12 +55,12 @@ export default class NewsFeed extends Component<any, State> {
         })
     }
 
-    handleChange = (e: any, data: { [key: string]: any }) => {
+    handleChange(e: any, data: { [key: string]: any }) {
         // @ts-ignore
         this.setState({[data.name]: data.value})
     }
 
-    submitPost = () => {
+    async submitPost() {
         const stateUpdate: any = {
             postSuccess: false,
             postError: false
@@ -78,27 +73,20 @@ export default class NewsFeed extends Component<any, State> {
             const apiOrigin = this.context.accountIdentifiers.apiOrigin;
             // @ts-ignore
             const userId = this.context.identity.id
-            fetch(`${apiOrigin}/prod/internal/posts`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    userId: userId,
-                    type: 'Text',
-                    body: this.state.postBody
-                }),
-                headers: {
-                    'Authorization': Auth.getAuthToken()
-                }
-            }).then(() => {
+            try {
+                await Posts.createPost(apiOrigin, userId, this.state.postBody)
                 this.setState({
                     postSuccess: true,
                     postBody: ''
                 })
-                this.refreshPosts()
-            }).catch(() => {
+                await this.refreshFeed()
+            } catch (err) {
+                console.error(err)
+
                 this.setState({
                     postError: true
                 })
-            })
+            }
         }
     }
 
@@ -110,6 +98,7 @@ export default class NewsFeed extends Component<any, State> {
                                error={this.state.postBodyError}/>
                 <Form.Button onClick={this.submitPost}>Post</Form.Button>
             </Form>
+            <FollowRequestForm />
             {this.state.loading && <Loader active /> ||
             <Feed>
                 {this.state.entries.map(entry => {

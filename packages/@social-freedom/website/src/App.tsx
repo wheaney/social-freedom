@@ -1,6 +1,6 @@
 import React, {Component} from 'react'
 import {Button, Container, Grid, Loader, Menu, Placeholder, Segment, Visibility} from 'semantic-ui-react'
-import Auth from "./services/auth";
+import Auth from "./services/Auth";
 import {AuthDetails} from "@social-freedom/types";
 import NewsFeed from "./components/NewsFeed";
 import HomepageHeading from "./components/HomepageHeading";

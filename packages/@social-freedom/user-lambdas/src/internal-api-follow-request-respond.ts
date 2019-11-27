@@ -1,8 +1,11 @@
 import {APIGatewayEvent} from "aws-lambda";
 import Util from "./shared/util";
 import {InternalFollowResponse} from "@social-freedom/types";
-import {AccountDetailsFollowersKey, AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
-import {internalFollowRequestCreate} from "./internal-api-follow-request-create";
+import {
+    AccountDetailsFollowersKey,
+    AccountDetailsIncomingFollowRequestsKey,
+    AccountDetailsOutgoingFollowRequestsKey
+} from "./shared/constants";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
@@ -24,19 +27,23 @@ export const internalFollowRequestRespond = async (cognitoAuthToken: string, res
             accepted: response.accepted
         }
         if (response.accepted) {
-            await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, response.userId)
+            await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, requesterDetails.userId)
 
             followerApiResponsePayload['accountDetails'] = await Util.getThisAccountDetails()
         } else {
             // TODO - unsubscribe from SNS topic
         }
 
-        await Util.apiRequest(requesterDetails.apiOrigin, '/follower/follow-request-response', cognitoAuthToken,
+        await Util.apiRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', cognitoAuthToken,
             'POST', followerApiResponsePayload)
 
         // if this account isn't public and we're not already following, request to follow them
         if (response.accepted && !await Util.isAccountPublic() && !await Util.isFollowing(response.userId) ) {
-            await internalFollowRequestCreate(cognitoAuthToken, requesterDetails, followerApiResponsePayload['accountDetails'])
+            await Promise.all([
+                Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, requesterDetails.userId),
+                Util.apiRequest(requesterDetails.apiOrigin, 'follower/follow-request',
+                    cognitoAuthToken, 'POST', followerApiResponsePayload['accountDetails'])
+            ])
         }
 
         // Remove the follow request from the list of received requests

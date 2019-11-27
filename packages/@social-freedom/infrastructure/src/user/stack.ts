@@ -12,12 +12,13 @@ import {AttributeType, BillingMode, ProjectionType, Table} from "@aws-cdk/aws-dy
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
 import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
 import {Subscription, SubscriptionProtocol, Topic} from "@aws-cdk/aws-sns";
-import {Code, Function as LambdaFunction} from "@aws-cdk/aws-lambda";
+import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
 import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
 import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 import LambdaHelper from "../shared/lambda-helper";
 import {ApiHelper} from "../shared/api-helper";
+import {CustomResource} from "@aws-cdk/aws-cloudformation";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
@@ -130,14 +131,14 @@ export class UserStack extends cdk.Stack {
             TRACKED_ACCOUNTS_TABLE: TrackedAccounts.tableName,
             MEDIA_BUCKET: MediaBucket.bucketName,
             CDN_DOMAIN_NAME: WebDistribution.domainName,
-            API_ORIGIN: Api.domainName,
+            API_ORIGIN: Api.url,
             CORS_ORIGIN: isDevelopment ? '*' : federalWebsiteOrigin
         }
 
         const LambdaCode = Code.fromAsset('./node_modules/@social-freedom/user-lambdas')
-        const TempLambdaUtils = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode)
-        const ProfileEventsHandler = TempLambdaUtils.constructLambda('sns-handle-following-account-profile-events')
-        const PostEventsHandler = TempLambdaUtils.constructLambda('sns-handle-following-account-post-events')
+        const SNSLambdas = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode)
+        const ProfileEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-profile-events')
+        const PostEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-post-events')
         PostEventsHandler.addPermission('PostEventHandlerLambaPermission', {
             action: 'lambda:InvokeFunction',
             principal: new ServicePrincipal("sns.amazonaws.com")
@@ -148,12 +149,9 @@ export class UserStack extends cdk.Stack {
             protocol: SubscriptionProtocol.LAMBDA
         })
 
-        const LambdaUtils = new LambdaHelper(this, ExecutionerRole, {
-            ...EnvironmentVariables,
-            PROFILE_EVENTS_HANDLER: ProfileEventsHandler.functionArn,
-            POST_EVENTS_HANDLER: PostEventsHandler.functionArn
-        }, LambdaCode)
-        const ApiUtils = new ApiHelper(LambdaUtils, CognitoAuthorizer, isDevelopment ? '*' : federalWebsiteOrigin)
+
+        const APILambdas = new LambdaHelper(this, ExecutionerRole, {}, LambdaCode)
+        const ApiUtils = new ApiHelper(APILambdas, CognitoAuthorizer, isDevelopment ? '*' : federalWebsiteOrigin)
 
         const FollowerApi = Api.root.addResource('follower')
         ApiUtils.constructLambdaApi(FollowerApi, 'follow-request', 'POST', "follower-api-follow-request-create")
@@ -172,7 +170,36 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(InternalApi, 'posts', 'POST', 'internal-api-post-create')
         ApiUtils.constructLambdaApi(InternalApi, 'feed', 'GET', 'internal-api-feed-get')
 
-        this.constructSnsTopicSubscriptionValidation(LambdaUtils.constructLambda('sns-audit-new-sns-subscription'))
+        this.constructSnsTopicSubscriptionValidation(APILambdas.constructLambda('sns-audit-new-sns-subscription'))
+
+        const APIFunctionArns = APILambdas.lambdas.map(lambdaFunction => lambdaFunction.functionArn)
+        const PostStackCreationRole = new Role(this, "PostStackCreation", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com")
+        });
+        PostStackCreationRole.addToPolicy(new PolicyStatement({
+            resources: APIFunctionArns,
+            actions: ['lambda:UpdateFunctionConfiguration']
+        }));
+        PostStackCreationRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'))
+        const PostStackCreationLambda = new LambdaFunction(this, 'PostStackCreationLambda', {
+            runtime: Runtime.NODEJS_10_X,
+            code: LambdaCode,
+            handler: 'cloudformation-post-stack-creation.handler',
+            role: PostStackCreationRole
+        })
+        new CustomResource(this, 'PostStackCreationResource', {
+            provider: {
+                serviceToken: PostStackCreationLambda.functionArn
+            },
+            properties: {
+                FunctionArns: APIFunctionArns,
+                EnvironmentVariables: {
+                    ...EnvironmentVariables,
+                    PROFILE_EVENTS_HANDLER: ProfileEventsHandler.functionArn,
+                    POST_EVENTS_HANDLER: PostEventsHandler.functionArn
+                }
+            }
+        })
     }
 
     buildSortTable(tableName: string, primaryKey: string, sortKey: string = "id", createTimestampIndex: boolean = true): Table {
@@ -275,8 +302,7 @@ export class UserStack extends cdk.Stack {
             resources: [topic.topicArn]
         }))
         new CfnOutput(this, `${id}Output`, {
-            value: topic.topicArn,
-            exportName: `${id}ARN`
+            value: topic.topicArn
         })
 
         return topic

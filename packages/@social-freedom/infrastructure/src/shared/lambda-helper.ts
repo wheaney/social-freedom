@@ -7,24 +7,30 @@ export default class LambdaHelper {
     readonly role: IRole;
     readonly envVars:{[key:string]: any};
     readonly code: Code;
+    readonly lambdas: LambdaFunction[];
 
     constructor(stack: Stack, role: IRole, envVars: {[key:string]: any}, code: Code) {
         this.stack = stack
         this.role = role
         this.envVars = envVars
         this.code = code
+        this.lambdas = []
     }
 
     constructLambda(handler: string):LambdaFunction {
         // TODO - DLQ setup for lambda failures
 
         // Lambda references assume that tsc has compiled all *.ts files to the dist directory
-        return new LambdaFunction(this.stack, handler, {
+        const lambda = new LambdaFunction(this.stack, handler, {
             runtime: Runtime.NODEJS_10_X,
             code: this.code,
             handler: `${handler}.handler`,
             role: this.role,
             environment: this.envVars
         });
+
+        this.lambdas.push(lambda)
+
+        return lambda
     }
 }

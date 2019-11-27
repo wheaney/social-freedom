@@ -1,7 +1,7 @@
 import * as React from 'react'
 import {Component} from 'react'
 import {Container, Form, Grid, List, Message, Segment} from "semantic-ui-react";
-import Auth from "../services/auth";
+import Auth from "../services/Auth";
 import {AuthContext} from "./AuthContext";
 
 const RegionOptions = [
@@ -76,18 +76,18 @@ export default class AccountRegistration extends Component<Properties, State> {
     submitForm = () => {
         const stateUpdate: State = {
             submitSuccess: false,
-            submitError: false
+            submitError: false,
+            accountIdError: !this.state.accountId,
+            regionError: !this.state.region,
+            apiOriginError: !this.state.apiOrigin,
+            postsTopicArnError: !this.state.postsTopicArn,
+            profileTopicArnError: !this.state.profileTopicArn
         }
-        stateUpdate.accountIdError = !this.state.accountId
-        stateUpdate.regionError = !this.state.region
-        stateUpdate.apiOriginError = !this.state.apiOrigin
-        stateUpdate.postsTopicArnError = !this.state.postsTopicArn
-        stateUpdate.profileTopicArnError = !this.state.profileTopicArn
         this.setState(stateUpdate)
 
         if (!stateUpdate.accountIdError && !stateUpdate.regionError && !stateUpdate.apiOriginError &&
             !stateUpdate.postsTopicArnError && !stateUpdate.profileTopicArnError) {
-            fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/prod/register`, {
+            fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/register`, {
                 method: 'POST',
                 body: JSON.stringify({
                     accountId: this.state.accountId,

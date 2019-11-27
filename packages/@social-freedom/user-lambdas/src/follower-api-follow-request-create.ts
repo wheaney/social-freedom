@@ -6,34 +6,35 @@ import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
 
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
     return await Util.apiGatewayProxyWrapper(async () => {
-        await followRequestCreate(Util.getAuthToken(event), {
+        const followRequest: FollowRequest = {
             ...JSON.parse(event.body),
             userId: Util.getUserId(event)
-        })
+        }
+
+        /**
+         * TODO - validate that userId of requester matches other account details
+         */
+
+        await Promise.all([
+            Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, followRequest.userId),
+            Util.putTrackedAccount(followRequest),
+            Util.subscribeToProfileEvents(followRequest),
+            conditionalAutoRespond(Util.getAuthToken(event), followRequest.userId)
+        ])
     })
 };
 
-// visible for testing
-export const followRequestCreate = async (cognitoAuthToken: string, request:FollowRequest): Promise<void> => {
-    /**
-     * TODO - validate that userId of requester matches other account details,
-     *        via call to Federal stack
-     */
-
-    await Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, request.userId)
-    await Util.putTrackedAccount(request)
-    await Util.subscribeToProfileEvents(request)
-
+export const conditionalAutoRespond = async (cognitoAuthToken: string, userId: string) => {
     // TODO - implement auto-denied condition (e.g. blocked account)
     const autoDenied = false
     if (autoDenied) {
         await internalFollowRequestRespond(cognitoAuthToken, {
-            userId: request.userId,
+            userId: userId,
             accepted: false
         })
     } else if (await Util.isAccountPublic()) {
         await internalFollowRequestRespond(cognitoAuthToken, {
-            userId: request.userId,
+            userId: userId,
             accepted: true
         })
     }

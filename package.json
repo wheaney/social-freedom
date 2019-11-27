@@ -6,7 +6,8 @@
     "federalstackcheck": "cd ./packages/@social-freedom/infrastructure && npm run federalstackcheck",
     "federalstackdeploy": "cd ./packages/@social-freedom/infrastructure && npm run federalstackdeploy",
     "userstackcheck": "cd ./packages/@social-freedom/infrastructure && npm run userstackcheck",
-    "userstackdeploy": "cd ./packages/@social-freedom/infrastructure && npm run userstackdeploy"
+    "userstackdeploy": "cd ./packages/@social-freedom/infrastructure && npm run userstackdeploy",
+    "website": "cd ./packages/@social-freedom/website && npm start"
   },
   "repository": {
     "type": "git",

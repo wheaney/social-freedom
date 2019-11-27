@@ -3,7 +3,6 @@ import {AttributeMap, GetItemOutput, Key} from "aws-sdk/clients/dynamodb";
 import * as AWS from "aws-sdk";
 import {AWSError} from "aws-sdk";
 import {APIGatewayEvent} from "aws-lambda";
-import * as http from "http";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
@@ -12,9 +11,12 @@ import {
     FeedTablePartitionKey
 } from "./constants";
 import {FeedEntry, Profile, ReducedAccountDetails} from "@social-freedom/types";
+import fetch from 'node-fetch';
+import {Response} from 'node-fetch';
 
 // TODO - unit testing
 
+// TODO - split this up by service/integration
 const Util = {
     apiGatewayProxyWrapper: async (proxyFunction: () => Promise<any>) => {
         try {
@@ -63,7 +65,9 @@ const Util = {
     getProfile: async (): Promise<Profile> => {
         // TODO
 
-        return {} as Profile
+        return {
+            name: "Testy McTesterson"
+        } as Profile
     },
 
     isFollower: async (userId: string): Promise<boolean> => {
@@ -74,46 +78,29 @@ const Util = {
         return process.env.USER_ID === userId || await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, userId)
     },
 
-    apiRequest: async (hostname: string, path: string, authToken: string,
+    apiRequest: async (origin: string, path: string, authToken: string,
                                      requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
-                                     requestBody?: any) => {
+                                     requestBody?: any): Promise<Response> => {
         const requestBodyString: string = ['POST', 'PUT'].includes(requestMethod) && requestBody && JSON.stringify(requestBody)
-        const additionalRequestHeaders = requestBodyString && {
+        const additionalRequestHeaders = !!requestBodyString && {
             'Content-Type': 'application/json',
-            'Content-Length': requestBodyString.length
+            'Content-Length': requestBodyString.length.toString()
         }
-        const req = http.request({
-            hostname: hostname,
-            path: `/prod${path}`,
+        const requestUrl = `${origin}${path}`
+        return await fetch(requestUrl, {
             method: requestMethod,
+            body: !!requestBodyString ? requestBodyString : undefined,
             headers: {
                 [AuthTokenHeaderName]: authToken,
                 ...additionalRequestHeaders
             }
-        }, (res) => {
-            if (res.statusCode < 200 || res.statusCode >= 300) {
-                throw new Error('statusCode=' + res.statusCode)
+        }).then(res => {
+            if (!res.ok) {
+                throw Error(`API request to URL ${requestUrl} returned with status ${res.status}`)
             }
-            let body: any[] = [];
-            res.on('data', function (chunk) {
-                body.push(chunk);
-            });
-            res.on('end', function () {
-                try {
-                    body = JSON.parse(Buffer.concat(body).toString());
-                } catch (e) {
-                    throw e
-                }
-                return body
-            });
-        });
-        req.on('error', function (err) {
-            throw err
-        });
-        if (requestBodyString) {
-            req.write(requestBodyString);
-        }
-        req.end();
+
+            return res
+        })
     },
 
     getTrackedAccountDetails: async (userId: string): Promise<ReducedAccountDetails> => {
@@ -211,7 +198,7 @@ const Util = {
                 postsTopicArn: {S: trackedAccount.postsTopicArn},
                 profileTopicArn: {S: trackedAccount.profileTopicArn},
                 name: {S: trackedAccount.name},
-                photoUrl: {S: trackedAccount.photoUrl}
+                photoUrl: !!trackedAccount.photoUrl ? {S: trackedAccount.photoUrl} : undefined
             }
         }).promise()
     },
