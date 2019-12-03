@@ -18,7 +18,7 @@ import {IRule, Rule, RuleTargetConfig} from "@aws-cdk/aws-events";
 import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 import LambdaHelper from "../shared/lambda-helper";
 import {ApiHelper} from "../shared/api-helper";
-import {CustomResource} from "@aws-cdk/aws-cloudformation";
+import {CustomResource, CustomResourceProvider} from "@aws-cdk/aws-cloudformation";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
@@ -188,9 +188,7 @@ export class UserStack extends cdk.Stack {
             role: PostStackCreationRole
         })
         new CustomResource(this, 'PostStackCreationResource', {
-            provider: {
-                serviceToken: PostStackCreationLambda.functionArn
-            },
+            provider: CustomResourceProvider.fromLambda(PostStackCreationLambda),
             properties: {
                 FunctionArns: APIFunctionArns,
                 EnvironmentVariables: {

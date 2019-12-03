@@ -87,7 +87,7 @@ export default class AccountRegistration extends Component<Properties, State> {
 
         if (!stateUpdate.accountIdError && !stateUpdate.regionError && !stateUpdate.apiOriginError &&
             !stateUpdate.postsTopicArnError && !stateUpdate.profileTopicArnError) {
-            fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/register`, {
+            fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}register`, {
                 method: 'POST',
                 body: JSON.stringify({
                     accountId: this.state.accountId,

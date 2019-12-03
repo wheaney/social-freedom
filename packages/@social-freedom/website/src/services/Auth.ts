@@ -16,7 +16,7 @@ const Auth = {
 
     getIdentity: async ():Promise<AuthDetails> => {
         if (Auth.isAuthenticated()) {
-            const apiResponse = await fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}/identity`, {
+            const apiResponse = await fetch(`${process.env.REACT_APP_FEDERAL_API_ORIGIN}identity`, {
                 headers: {
                     'Authorization': Auth.getAuthToken()
                 }
