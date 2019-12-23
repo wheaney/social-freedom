@@ -13,6 +13,7 @@ import {
 import {FeedEntry, Profile, ReducedAccountDetails} from "@social-freedom/types";
 import fetch from 'node-fetch';
 import {Response} from 'node-fetch';
+import {UserDetails} from "@social-freedom/types";
 
 // TODO - unit testing
 
@@ -22,6 +23,7 @@ const Util = {
         try {
             return Util.apiGatewayLambdaResponse(200, await proxyFunction())
         } catch (err) {
+            // TODO - add handling for unauthorized, return 401
             console.error(err)
             return Util.apiGatewayLambdaResponse(500)
         }
@@ -81,26 +83,29 @@ const Util = {
     apiRequest: async (origin: string, path: string, authToken: string,
                                      requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
                                      requestBody?: any): Promise<Response> => {
-        const requestBodyString: string = ['POST', 'PUT'].includes(requestMethod) && requestBody && JSON.stringify(requestBody)
+        let body = requestBody
+        if (Util.isPromise(requestBody)) {
+            body = await requestBody
+        }
+        const requestBodyString: string = ['POST', 'PUT'].includes(requestMethod) && body && JSON.stringify(body)
         const additionalRequestHeaders = !!requestBodyString && {
             'Content-Type': 'application/json',
             'Content-Length': requestBodyString.length.toString()
         }
         const requestUrl = `${origin}${path}`
-        return await fetch(requestUrl, {
+        const res = await fetch(requestUrl, {
             method: requestMethod,
             body: !!requestBodyString ? requestBodyString : undefined,
             headers: {
                 [AuthTokenHeaderName]: authToken,
                 ...additionalRequestHeaders
             }
-        }).then(res => {
-            if (!res.ok) {
-                throw Error(`API request to URL ${requestUrl} returned with status ${res.status}`)
-            }
-
-            return res
         })
+        if (!res.ok) {
+            throw Error(`API request to URL ${requestUrl} returned with status ${res.status}`)
+        }
+
+        return res
     },
 
     getTrackedAccountDetails: async (userId: string): Promise<ReducedAccountDetails> => {
@@ -157,7 +162,7 @@ const Util = {
         }).promise()
     },
 
-    dynamoSetContains: async (tableName: string, attributeKey: string, value: string): Promise<boolean> => {
+    getDynamoSet: async (tableName: string, attributeKey: string): Promise<string[]> => {
         const setResult = await new AWS.DynamoDB().getItem({
             TableName: tableName,
             Key: {
@@ -165,8 +170,17 @@ const Util = {
             }
         }).promise()
 
-        return !!setResult.Item && !!setResult.Item["value"] && !!setResult.Item["value"].SS
-            && setResult.Item["value"].SS.includes(value)
+        if (!!setResult.Item && !!setResult.Item["value"] && !!setResult.Item["value"].SS) {
+            return setResult.Item["value"].SS
+        }
+
+        return []
+    },
+
+    dynamoSetContains: async (tableName: string, attributeKey: string, value: string): Promise<boolean> => {
+        const setResult = await Util.getDynamoSet(tableName, attributeKey)
+
+        return setResult.includes(value)
     },
 
     getAuthToken: (event: APIGatewayEvent) => {
@@ -252,7 +266,7 @@ const Util = {
         }).promise()
     },
 
-    getTrackedAccounts: async (uniqueUserIds: string[]):Promise<{[userId:string]: ReducedAccountDetails}> => {
+    getTrackedAccounts: async (uniqueUserIds: string[]):Promise<UserDetails> => {
         const usersResult = await new AWS.DynamoDB().batchGetItem({
             RequestItems: {
                 [process.env.TRACKED_ACCOUNTS_TABLE]: {
@@ -263,7 +277,7 @@ const Util = {
             }
         }).promise()
 
-        return usersResult.Responses[process.env.TRACKED_ACCOUNTS_TABLE].reduce((acc: { [userId: string]: ReducedAccountDetails }, current: AttributeMap) => {
+        return usersResult.Responses[process.env.TRACKED_ACCOUNTS_TABLE].reduce((acc: UserDetails, current: AttributeMap) => {
             const accountDetails = {
                 userId: current['userId'].S,
                 apiOrigin: current['apiOrigin'].S,
@@ -276,6 +290,20 @@ const Util = {
 
             return acc
         }, {})
+    },
+
+    usersRequest: async (requestUsers: string[] = [], responseUsers: string[] = []): Promise<UserDetails> => {
+        const userIds = responseUsers.filter(userId => !requestUsers.includes(userId))
+        if (userIds.length > 0) {
+            const uniqueIds = [...new Set(userIds)]
+            return await Util.getTrackedAccounts(uniqueIds)
+        }
+
+        return {}
+    },
+
+    isPromise: (object: any): object is Promise<any> => {
+        return !!(object as Promise<any>).then
     }
 }
 

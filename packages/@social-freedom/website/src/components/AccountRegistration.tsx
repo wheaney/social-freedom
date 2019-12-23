@@ -2,7 +2,7 @@ import * as React from 'react'
 import {Component} from 'react'
 import {Container, Form, Grid, List, Message, Segment} from "semantic-ui-react";
 import Auth from "../services/Auth";
-import {AuthContext} from "./AuthContext";
+import {SessionContext} from "../contexts/SessionContext";
 
 const RegionOptions = [
     {key: "us-east-2", text: "US East (Ohio) ", value: "us-east-2"},
@@ -48,8 +48,8 @@ type State = {
     submitError?: boolean
 }
 export default class AccountRegistration extends Component<Properties, State> {
-    static contextType = AuthContext
-    context!: React.ContextType<typeof AuthContext>
+    static contextType = SessionContext
+    context!: React.ContextType<typeof SessionContext>
 
     constructor(props: Properties, state: State) {
         super(props, state)
@@ -57,13 +57,13 @@ export default class AccountRegistration extends Component<Properties, State> {
     }
 
     componentDidMount(): void {
-        if (this.context && this.context.accountIdentifiers) {
+        if (this.context && this.context.auth && this.context.auth.accountIdentifiers) {
             this.setState({
-                accountId: this.context.accountIdentifiers.accountId || '',
-                region: this.context.accountIdentifiers.region || '',
-                apiOrigin: this.context.accountIdentifiers.apiOrigin || '',
-                postsTopicArn: this.context.accountIdentifiers.postsTopicArn || '',
-                profileTopicArn: this.context.accountIdentifiers.profileTopicArn || ''
+                accountId: this.context.auth.accountIdentifiers.accountId || '',
+                region: this.context.auth.accountIdentifiers.region || '',
+                apiOrigin: this.context.auth.accountIdentifiers.apiOrigin || '',
+                postsTopicArn: this.context.auth.accountIdentifiers.postsTopicArn || '',
+                profileTopicArn: this.context.auth.accountIdentifiers.profileTopicArn || ''
             })
         }
 
@@ -114,7 +114,7 @@ export default class AccountRegistration extends Component<Properties, State> {
 
     render() {
         // @ts-ignore
-        const identityId = this.context.identity.id
+        const identityId = this.context.auth.identity.id
         return <Container>
             <Message>
                 <Message.Header>Register your account stack</Message.Header>

@@ -2,7 +2,7 @@ import {Component, default as React} from "react";
 import {Form, Header} from "semantic-ui-react";
 import Follows from "../services/Follows";
 import {FollowRequest, ReducedAccountDetails} from "@social-freedom/types";
-import {AuthContext} from "./AuthContext";
+import {SessionContext} from "../contexts/SessionContext";
 
 type State = FollowRequest & {
     apiOriginError?: boolean,
@@ -12,8 +12,8 @@ type State = FollowRequest & {
     userIdError?: boolean
 }
 export default class FollowRequestForm extends Component<{}, State> {
-    static contextType = AuthContext
-    context!: React.ContextType<typeof AuthContext>
+    static contextType = SessionContext
+    context!: React.ContextType<typeof SessionContext>
 
     constructor(props: any, state: any) {
         super(props, state)
@@ -47,7 +47,7 @@ export default class FollowRequestForm extends Component<{}, State> {
         if (!stateUpdate.apiOriginError && !stateUpdate.postsTopicArnError && !stateUpdate.profileTopicArnError
             && !stateUpdate.nameError && !stateUpdate.userIdError) {
             // @ts-ignore
-            await Follows.createFollowRequest(this.context.accountIdentifiers.apiOrigin, this.state as ReducedAccountDetails)
+            await Follows.createFollowRequest(this.context.auth.accountIdentifiers.apiOrigin, this.state as ReducedAccountDetails)
             this.setState({
                 apiOrigin: '',
                 name: '',

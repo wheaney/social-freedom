@@ -32,7 +32,7 @@ export const conditionalAutoRespond = async (cognitoAuthToken: string, userId: s
             userId: userId,
             accepted: false
         })
-    } else if (await Util.isAccountPublic()) {
+    } else if (await Util.isAccountPublic() || await Util.isFollowing(userId)) {
         await internalFollowRequestRespond(cognitoAuthToken, {
             userId: userId,
             accepted: true

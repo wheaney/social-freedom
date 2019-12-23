@@ -1,5 +1,5 @@
 import React, {Component} from 'react'
-import {Button, Container, Grid, Loader, Menu, Placeholder, Segment, Visibility} from 'semantic-ui-react'
+import {Button, Container, Form, Grid, Loader, Menu, Placeholder, Segment, Visibility} from 'semantic-ui-react'
 import Auth from "./services/Auth";
 import {AuthDetails} from "@social-freedom/types";
 import NewsFeed from "./components/NewsFeed";
@@ -7,12 +7,16 @@ import HomepageHeading from "./components/HomepageHeading";
 import HomepageContent from "./components/HomepageContent";
 import Footer from "./components/Footer";
 import AccountRegistration from "./components/AccountRegistration";
-import { AuthContext } from './components/AuthContext';
+import {UserDetails} from "../../types/src";
+import { SessionContext } from './contexts/SessionContext';
+import FollowRequestForm from "./components/FollowRequestForm";
+import IncomingFollowRequests from "./components/IncomingFollowRequests";
 
 type AppState = {
     menuFixed: boolean,
     identityLoading: boolean,
-    authDetails: AuthDetails
+    authDetails: AuthDetails,
+    userDetails: UserDetails
 }
 
 class App extends Component<{}, AppState> {
@@ -26,10 +30,12 @@ class App extends Component<{}, AppState> {
             identityLoading: isAuthenticated,
             authDetails: {
                 isAuthenticated: isAuthenticated
-            }
+            },
+            userDetails: {}
         }
 
         this.refreshIdentity = this.refreshIdentity.bind(this)
+        this.updateUserDetails = this.updateUserDetails.bind(this)
     }
 
     async componentDidMount(): Promise<void> {
@@ -53,6 +59,15 @@ class App extends Component<{}, AppState> {
                 identityLoading: false
             })
         }
+    }
+
+    updateUserDetails(updatedDetails: UserDetails) {
+        this.setState({
+            userDetails: {
+                ...this.state.userDetails,
+                ...updatedDetails
+            }
+        })
     }
 
     hideFixedMenu = () => this.setState({menuFixed: false})
@@ -128,11 +143,19 @@ class App extends Component<{}, AppState> {
             </React.Fragment>
         } else {
             if (!identityLoading) {
-                return <AuthContext.Provider value={authDetails}>
+                return <SessionContext.Provider value={{
+                    auth: this.state.authDetails,
+                    users: this.state.userDetails,
+                    updateUsers: this.updateUserDetails
+                }}>
                     {menu}
-                    {authDetails.isRegistered && <NewsFeed/> ||
+                    {authDetails.isRegistered && <Container>
+                        <NewsFeed/>
+                        <IncomingFollowRequests />
+                        <FollowRequestForm />
+                    </Container> ||
                     <AccountRegistration submitSuccess={this.refreshIdentity}/>}
-                </AuthContext.Provider>
+                </SessionContext.Provider>
             } else {
                 return <Loader active/>
             }

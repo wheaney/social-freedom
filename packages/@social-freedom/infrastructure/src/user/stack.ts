@@ -165,7 +165,10 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(FollowerApi, 'profile', 'GET', 'follower-api-profile-get')
 
         const InternalApi = Api.root.addResource('internal')
-        ApiUtils.constructLambdaApi(InternalApi, 'follow-request', 'POST', 'internal-api-follow-request-create')
+        const FollowRequestsApi = InternalApi.addResource('follow-requests')
+        ApiUtils.addCorsOptions(FollowRequestsApi)
+        ApiUtils.constructLambdaApiMethod(FollowRequestsApi, 'GET', 'internal-api-follow-requests-get')
+        ApiUtils.constructLambdaApiMethod(FollowRequestsApi, 'POST', 'internal-api-follow-request-create')
         ApiUtils.constructLambdaApi(InternalApi, 'follow-request-response', 'POST', 'internal-api-follow-request-respond')
         ApiUtils.constructLambdaApi(InternalApi, 'posts', 'POST', 'internal-api-post-create')
         ApiUtils.constructLambdaApi(InternalApi, 'feed', 'GET', 'internal-api-feed-get')

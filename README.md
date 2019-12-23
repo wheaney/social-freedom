@@ -13,7 +13,7 @@ The central account whose main duty is to orchestrate the sign-in and then deleg
 * Static website assets in S3/CloudFront
 * Route53 public DNS entries for the website
 * Cognito identities for sign-in
-  * Cognito Hosted UI can be used for sign-in/up
+  * Cognito Hosted UI used for sign-in/up
 * DynamoDB "identity to account" table containing mapping of cognito identity (arn) to account id that owns their infrastructure
 * SNS topics
   * Profile updated
@@ -176,3 +176,11 @@ but if a user comments on a friend's post, the current design will have that fri
 restrict who can see a comment, a user account would need to keep itself apprised of all blocks for all friends'
 accounts as well, which seems like a lot to manage. For now I think that post activities like this will need to simply be
 "visible to all this friend's friends, regardless of your own blocks."
+* Crypto signatures will need to be applied such that profile and post data that's passed around can be verified against its
+account of origin (e.g. if I'm looking at my friend's post and see a comment from someone else, I should be able to verify 
+a signature on that post against a public key I can pull from that account)
+  * Similarly, we'll want to require that activities on posts include the previous activity's signature in its own signature,
+  therefore making activities immutable; modifying or deleting such an activity would require appending a new activity to
+  the chain, in this way a running history is preserved and the owning/hosting account of the post can't alter history
+  without invalidating it (though they can rewind it)
+  * Need to be able to support key rotation in case an account gets compromised

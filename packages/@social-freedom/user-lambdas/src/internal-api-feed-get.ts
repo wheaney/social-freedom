@@ -41,12 +41,7 @@ export const feedGet = async (request: GetFeedRequest): Promise<GetFeedResponse>
         lastEntryKey: queryResult.LastEvaluatedKey && queryResult.LastEvaluatedKey['timeSortKey'].S
     }
 
-    // the request tells us which account details are already known, ignore those and retrieve any that remain
-    const userIds = response.entries.map(entry => entry.userId).filter(userId => !request.cachedUsers || !request.cachedUsers.includes(userId))
-    if (userIds.length > 0) {
-        const uniqueIds = [...new Set(userIds)]
-        response.users = await Util.getTrackedAccounts(uniqueIds)
-    }
+    response.users = await Util.usersRequest(request.cachedUsers, response.entries.map(entry => entry.userId))
 
     return response
 }

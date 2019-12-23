@@ -1,4 +1,4 @@
-import {ReducedAccountDetails} from "./account-types";
+import {UserDetails} from "./account-types";
 
 export enum PostType {
     Text = 'Text',
@@ -24,7 +24,7 @@ export type GetPostsRequest = {
 }
 
 export type GetPostsResponse = {
-    users: { [userId: string]: ReducedAccountDetails },
+    users: UserDetails,
     posts: PostDetails[],
     lastPostKey: string
 }

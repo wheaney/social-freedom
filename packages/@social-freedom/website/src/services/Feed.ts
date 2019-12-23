@@ -3,11 +3,11 @@ import {GetFeedResponse} from "@social-freedom/types";
 
 const Feed = {
     getFeed: async (apiOrigin: string, cachedUsers: string[]):Promise<GetFeedResponse> => {
-        let feedRequestParams = ''
+        let requestParams = ''
         if (cachedUsers.length > 0) {
-            feedRequestParams = `?cachedUsers=${cachedUsers.join(',')}`
+            requestParams = `?cachedUsers=${cachedUsers.join(',')}`
         }
-        const response = await fetch(`${apiOrigin}/internal/feed${feedRequestParams}`, {
+        const response = await fetch(`${apiOrigin}/internal/feed${requestParams}`, {
             headers: {
                 'Authorization': Auth.getAuthToken()
             }

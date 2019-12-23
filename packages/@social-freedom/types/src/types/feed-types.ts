@@ -1,5 +1,5 @@
 import {PostDetails} from "./post-types";
-import {ReducedAccountDetails} from "./account-types";
+import {UsersRequest, UsersResponse} from "./shared-types";
 
 export type FeedEntryType = 'Post' | 'PostActivity' | 'ProfileUpdate'
 export type FeedEntryOperation = 'Create' | 'Read' | 'Update' | 'Delete'
@@ -13,13 +13,11 @@ export type FeedEntry = {
     body: PostDetails
 }
 
-export type GetFeedRequest = {
-    cachedUsers?: string[],
+export type GetFeedRequest = UsersRequest & {
     lastPostKey?: string
 }
 
-export type GetFeedResponse = {
-    users: { [userId: string]: ReducedAccountDetails },
+export type GetFeedResponse = UsersResponse & {
     entries: FeedEntry[],
     lastEntryKey: string
 }

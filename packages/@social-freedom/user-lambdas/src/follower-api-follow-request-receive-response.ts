@@ -5,7 +5,10 @@ import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} fro
 
 export const handler = async (event:APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
-        await Util.followerAPIIdentityCheck(event)
+        if (!(await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE,
+            AccountDetailsOutgoingFollowRequestsKey, Util.getUserId(event)))) {
+            throw new Error(`Unauthorized userId: ${Util.getUserId(event)}`)
+        }
 
         const response: FollowRequestResponse = JSON.parse(event.body)
         response.accountDetails = {
@@ -17,8 +20,6 @@ export const handler = async (event:APIGatewayEvent) => {
 }
 
 export const followRequestReceiveResponse = async (response: FollowRequestResponse) => {
-    await Util.removeFromDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, response.accountDetails.userId)
-
     if (response.accepted) {
         await Promise.all([
             Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, response.accountDetails.userId),
@@ -27,4 +28,6 @@ export const followRequestReceiveResponse = async (response: FollowRequestRespon
             Util.subscribeToPostEvents(response.accountDetails)
         ])
     }
+
+    await Util.removeFromDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, response.accountDetails.userId)
 }
