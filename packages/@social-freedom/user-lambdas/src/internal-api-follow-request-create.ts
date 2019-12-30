@@ -5,9 +5,9 @@ import {AccountDetailsOutgoingFollowRequestsKey} from "./shared/constants";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
-        Util.internalAPIIdentityCheck(event)
+        const eventValues = await Util.internalAPIIdentityCheck(event)
 
-        await internalFollowRequestCreate(Util.getAuthToken(event), JSON.parse(event.body))
+        await internalFollowRequestCreate(eventValues.authToken, eventValues.eventBody)
     })
 }
 

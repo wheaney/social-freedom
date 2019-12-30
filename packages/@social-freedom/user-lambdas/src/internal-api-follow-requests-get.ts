@@ -1,25 +1,33 @@
-import Util from "./shared/util";
+import Util, {DefaultEventValues} from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
-import {FollowRequestsRequest, FollowRequestsResponse} from "@social-freedom/types";
+import {FollowRequestsResponse} from "@social-freedom/types";
+import {cachedUsers} from "./shared/api-gateway-event-functions";
+
+type EventValues = DefaultEventValues & {
+    cachedUsers: string[],
+    incomingFollowRequests: string[]
+}
 
 export const handler = async (event: APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
-        Util.internalAPIIdentityCheck(event)
+        const eventValues: EventValues = await Util.internalAPIIdentityCheck(event, {
+            cachedUsers: cachedUsers,
+            incomingFollowRequests: incomingFollowRequests
+        })
 
-        const params = event.queryStringParameters
-        return await followRequestsGet(params ? {
-            cachedUsers: params['cachedUsers'] && params['cachedUsers'].split(",") || []
-        } : {})
+        return await followRequestsGet(eventValues)
     })
 }
 
-// visible for testing
-export const followRequestsGet = async (request: FollowRequestsRequest): Promise<FollowRequestsResponse> => {
-    const requests = await Util.getDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey)
+export async function incomingFollowRequests() {
+    return Util.getDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey)
+}
 
+// visible for testing
+export const followRequestsGet = async (eventValues: EventValues): Promise<FollowRequestsResponse> => {
     return {
-        userIds: requests,
-        users: await Util.usersRequest(request.cachedUsers, requests)
+        userIds: eventValues.incomingFollowRequests,
+        users: await Util.usersRequest(eventValues.cachedUsers, eventValues.incomingFollowRequests)
     }
 }

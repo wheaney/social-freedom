@@ -7,11 +7,11 @@ import {FeedEntry, PostDetails} from "@social-freedom/types";
 
 export const handler = async (event:APIGatewayEvent) => {
     return await Util.apiGatewayProxyWrapper(async () => {
-        Util.internalAPIIdentityCheck(event)
+        const eventValues = await Util.internalAPIIdentityCheck(event)
 
         await putPost({
-            ...JSON.parse(event.body),
-            userId: Util.getUserId(event)
+            ...eventValues.eventBody,
+            userId: eventValues.userId
         })
     })
 };
@@ -20,7 +20,7 @@ export const putPost = async (post:PostDetails) => {
     // Add post to DynamoDB "posts" table
     const timestamp:number = new Date(Date.now()).getTime()
     post.id = post.id || uuid.v1()
-    await new AWS.DynamoDB().putItem({
+    await Util.dynamoDbClient.putItem({
         TableName: process.env.POSTS_TABLE,
         Item: {
             "key": {S: PostsTablePartitionKey},

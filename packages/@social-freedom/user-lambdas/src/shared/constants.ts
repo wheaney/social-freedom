@@ -10,3 +10,5 @@ export const AccountDetailsFollowersKey = "Followers"
 export const AccountDetailsFollowingKey = "Following"
 
 export const AuthTokenHeaderName = 'Authorization'
+
+export const ConditionalCheckFailedCode = 'ConditionalCheckFailedException'
