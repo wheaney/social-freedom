@@ -1,6 +1,6 @@
 {
   "name": "social-freedom",
-  "version": "0.0.1",
+  "version": "0.0.7",
   "description": "Open-source social networking framework where each user account owns their infrastructure",
   "scripts": {
     "federalstackcheck": "cd ./packages/@social-freedom/infrastructure && npm run federalstackcheck",
@@ -20,6 +20,6 @@
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
   "devDependencies": {
-    "lerna": "^3.17.0"
+    "lerna": "^3.20.1"
   }
 }

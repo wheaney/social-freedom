@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/website",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "Static front-end website for the social-freedom project",
   "scripts": {
     "start": "react-scripts start",
@@ -22,18 +22,18 @@
     "url": "https://github.com/wheaney/social-freedom/issues"
   },
   "dependencies": {
-    "react": "^16.10.2",
-    "react-dom": "^16.10.2",
-    "semantic-ui-react": "^0.88.1"
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0",
+    "semantic-ui-react": "^0.88.2"
   },
   "devDependencies": {
-    "@social-freedom/types": "^0.0.6",
-    "@types/jest": "24.0.18",
-    "@types/node": "12.7.11",
-    "@types/react": "16.9.5",
-    "@types/react-dom": "16.9.1",
-    "react-scripts": "3.2.0",
-    "typescript": "3.6.3"
+    "@social-freedom/types": "^0.0.7",
+    "@types/jest": "24.0.25",
+    "@types/node": "13.1.2",
+    "@types/react": "16.9.17",
+    "@types/react-dom": "16.9.4",
+    "react-scripts": "3.3.0",
+    "typescript": "3.7.4"
   },
   "browserslist": {
     "production": [

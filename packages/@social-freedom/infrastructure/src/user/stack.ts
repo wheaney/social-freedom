@@ -10,7 +10,10 @@ import {
 } from "@aws-cdk/aws-iam";
 import {AttributeType, BillingMode, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
-import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
+import {
+    CloudFrontWebDistribution,
+    OriginAccessIdentity
+} from "@aws-cdk/aws-cloudfront";
 import {Subscription, SubscriptionProtocol, Topic} from "@aws-cdk/aws-sns";
 import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
@@ -65,22 +68,20 @@ export class UserStack extends cdk.Stack {
             removalPolicy: this.removalPolicy
         })
 
-        const OriginAccessIdentity = new CfnCloudFrontOriginAccessIdentity(this, "CloudFrontOriginAccessIdentity", {
-            cloudFrontOriginAccessIdentityConfig: {
-                comment: "CloudFront access for user media files"
-            }
+        const S3OriginAccessIdentity = new OriginAccessIdentity(this, "CloudFrontOriginAccessIdentity", {
+            comment: "CloudFront access for user media files"
         })
         const WebDistribution = new CloudFrontWebDistribution(this, "CloudFrontWebDistribution", {
             originConfigs: [{
                 s3OriginSource: {
                     s3BucketSource: MediaBucket,
-                    originAccessIdentityId: OriginAccessIdentity.ref
+                    originAccessIdentity: S3OriginAccessIdentity
                 },
                 behaviors: [{isDefaultBehavior: true}]
             }]
         })
         MediaBucket.addToResourcePolicy(new PolicyStatement({
-            principals: [new CanonicalUserPrincipal(OriginAccessIdentity.attrS3CanonicalUserId)],
+            principals: [new CanonicalUserPrincipal(S3OriginAccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId)],
             resources: [MediaBucket.bucketArn, MediaBucket.arnForObjects('*')],
             actions: ["s3:GetBucket*", "s3:GetObject*", "s3:List*"]
         }))

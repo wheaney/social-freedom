@@ -4,7 +4,10 @@ import {Code} from "@aws-cdk/aws-lambda";
 import {AttributeType, Table} from "@aws-cdk/aws-dynamodb"
 import {CanonicalUserPrincipal, ManagedPolicy, PolicyStatement, Role, ServicePrincipal} from "@aws-cdk/aws-iam"
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
-import {CfnCloudFrontOriginAccessIdentity, CloudFrontWebDistribution} from "@aws-cdk/aws-cloudfront";
+import {
+    CloudFrontWebDistribution,
+    OriginAccessIdentity
+} from "@aws-cdk/aws-cloudfront";
 import {Bucket} from "@aws-cdk/aws-s3";
 import {BucketDeployment, Source} from "@aws-cdk/aws-s3-deployment";
 import LambdaHelper from "../shared/lambda-helper";
@@ -92,10 +95,8 @@ ApiUtil.constructLambdaApi(Api.root, 'identity', 'GET', 'identity-get')
 
 const WebBucket = new Bucket(stack, 'WebsiteDistributionBucket');
 
-const OriginAccessIdentity = new CfnCloudFrontOriginAccessIdentity(stack, "CloudFrontOriginAccessIdentity", {
-    cloudFrontOriginAccessIdentityConfig: {
-        comment: "CloudFront access for user media files"
-    }
+const S3OriginAccessIdentity = new OriginAccessIdentity(stack, "CloudFrontOriginAccessIdentity", {
+    comment: "CloudFront access for user media files"
 })
 
 const WebDistribution = new CloudFrontWebDistribution(stack, 'CloudFrontWebDistribution', {
@@ -103,14 +104,14 @@ const WebDistribution = new CloudFrontWebDistribution(stack, 'CloudFrontWebDistr
         {
             s3OriginSource: {
                 s3BucketSource: WebBucket,
-                originAccessIdentityId: OriginAccessIdentity.ref
+                originAccessIdentity: S3OriginAccessIdentity
             },
             behaviors : [ {isDefaultBehavior: true}]
         }
     ]
 });
 WebBucket.addToResourcePolicy(new PolicyStatement({
-    principals: [new CanonicalUserPrincipal(OriginAccessIdentity.attrS3CanonicalUserId)],
+    principals: [new CanonicalUserPrincipal(S3OriginAccessIdentity.cloudFrontOriginAccessIdentityS3CanonicalUserId)],
     resources: [WebBucket.bucketArn, WebBucket.arnForObjects('*')],
     actions: ["s3:GetBucket*", "s3:GetObject*", "s3:List*"]
 }))
