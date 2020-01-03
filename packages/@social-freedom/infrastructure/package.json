@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/infrastructure",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Open-source social networking framework where each user account owns their infrastructure",
   "main": "index.js",
   "scripts": {
@@ -37,10 +37,12 @@
     "@aws-cdk/aws-ec2": "^1.19.0",
     "@aws-cdk/aws-events": "^1.19.0",
     "@aws-cdk/aws-lambda": "^1.19.0",
+    "@aws-cdk/aws-lambda-event-sources": "^1.19.0",
     "@aws-cdk/aws-route53": "^1.19.0",
     "@aws-cdk/aws-s3": "^1.19.0",
     "@aws-cdk/aws-s3-deployment": "^1.19.0",
     "@aws-cdk/aws-sns": "^1.19.0",
+    "@aws-cdk/aws-sqs": "^1.19.0",
     "@aws-cdk/core": "^1.19.0",
     "@aws-cdk/cx-api": "^1.19.0",
     "@aws-cdk/region-info": "^1.19.0",
@@ -54,9 +56,9 @@
     "typescript": "^3.7.4"
   },
   "dependencies": {
-    "@social-freedom/federal-lambdas": "^0.0.7",
-    "@social-freedom/user-lambdas": "^0.0.7",
-    "@social-freedom/website": "^0.0.7",
+    "@social-freedom/federal-lambdas": "^0.0.8",
+    "@social-freedom/user-lambdas": "^0.0.8",
+    "@social-freedom/website": "^0.0.8",
     "source-map-support": "^0.5.16"
   },
   "engines": {

@@ -35,6 +35,7 @@ export type ReducedAccountDetails = {
     profileTopicArn: string,
     postsTopicArn: string
 }
+
 export type UserDetails = {[userId: string]: ReducedAccountDetails}
 
 type PublicSearchField = "name" | "phone" | "email"

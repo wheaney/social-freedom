@@ -1,6 +1,6 @@
 {
   "name": "social-freedom",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Open-source social networking framework where each user account owns their infrastructure",
   "scripts": {
     "federalstackcheck": "cd ./packages/@social-freedom/infrastructure && npm run federalstackcheck",

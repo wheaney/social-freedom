@@ -30,13 +30,16 @@ export class ApiHelper {
     }
 
     constructLambdaApiMethod(resource: IResource, method: Method, handler: string) {
-        resource.addMethod(method, new LambdaIntegration(this.lambdaHelper.constructLambda(handler), {
+        const lambda = this.lambdaHelper.constructLambda(handler)
+        resource.addMethod(method, new LambdaIntegration(lambda, {
             proxy: true,
             allowTestInvoke: true
         }), {
             authorizationType: AuthorizationType.COGNITO,
             authorizer: {authorizerId: this.authorizer.ref}
         })
+
+        return lambda
     }
 
     // https://github.com/aws/aws-cdk/issues/906

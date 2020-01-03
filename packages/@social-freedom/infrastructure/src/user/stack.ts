@@ -22,6 +22,8 @@ import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 import LambdaHelper from "../shared/lambda-helper";
 import {ApiHelper} from "../shared/api-helper";
 import {CustomResource, CustomResourceProvider} from "@aws-cdk/aws-cloudformation";
+import {Queue} from "@aws-cdk/aws-sqs";
+import {SqsEventSource} from "@aws-cdk/aws-lambda-event-sources";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
@@ -87,6 +89,7 @@ export class UserStack extends cdk.Stack {
         }))
 
         // TODO - move role creation into Lambda helper, lock down function roles to only permit what's necessary
+        // TODO - where possible, use helper functions to apply policies (e.g. Queue provides grantConsumeMessages() fn)
         ExecutionerRole.addToPolicy(new PolicyStatement({
             resources: [PostsTable.tableArn, PostActivitiesTable.tableArn, FeedTable.tableArn, TrackedAccounts.tableArn, AccountDetailsTable.tableArn],
             actions: ['dynamodb:GetItem', 'dynamodb:UpdateItem', 'dynamodb:PutItem', 'dynamodb:BatchGetItem']
@@ -119,6 +122,16 @@ export class UserStack extends cdk.Stack {
             providerArns: [userPoolArn]
         })
 
+        const APIRequestsQueue = new Queue(this, "APIRequestsQueue", {
+            fifo: true,
+            queueName: `${this.stackName}-api-requests-queue.fifo`,
+            contentBasedDeduplication: true
+        })
+        ExecutionerRole.addToPolicy(new PolicyStatement({
+            resources: [APIRequestsQueue.queueArn],
+            actions: ['sqs:SendMessage', 'sqs:ReceiveMessage', 'sqs:DeleteMessage', 'sqs:GetQueueAttributes']
+        }))
+
         const EnvironmentVariables = {
             USER_ID: this.userId,
             ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
@@ -133,14 +146,15 @@ export class UserStack extends cdk.Stack {
             MEDIA_BUCKET: MediaBucket.bucketName,
             CDN_DOMAIN_NAME: WebDistribution.domainName,
             API_ORIGIN: Api.url,
-            CORS_ORIGIN: isDevelopment ? '*' : federalWebsiteOrigin
+            CORS_ORIGIN: isDevelopment ? '*' : federalWebsiteOrigin,
+            API_REQUESTS_QUEUE_URL: APIRequestsQueue.queueUrl
         }
 
         const LambdaCode = Code.fromAsset('./node_modules/@social-freedom/user-lambdas')
         const SNSLambdas = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode)
         const ProfileEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-profile-events')
         const PostEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-post-events')
-        PostEventsHandler.addPermission('PostEventHandlerLambaPermission', {
+        PostEventsHandler.addPermission('PostEventHandlerLambdaPermission', {
             action: 'lambda:InvokeFunction',
             principal: new ServicePrincipal("sns.amazonaws.com")
         })
@@ -150,12 +164,24 @@ export class UserStack extends cdk.Stack {
             protocol: SubscriptionProtocol.LAMBDA
         })
 
+        const APIRequestsSQSHandlerLambda = new LambdaFunction(this, 'APIRequestsHandler', {
+            runtime: Runtime.NODEJS_12_X,
+            code: LambdaCode,
+            handler: 'sqs-handle-api-requests.handler',
+            role: ExecutionerRole,
+            environment: {
+                ALLOW_SYNCHRONOUS_API_REQUESTS: "true"
+            }
+        });
+        APIRequestsSQSHandlerLambda.addEventSource(new SqsEventSource(APIRequestsQueue))
 
+        // environment variables are set in PostStackCreationLambda to prevent circular dependencies
         const APILambdas = new LambdaHelper(this, ExecutionerRole, {}, LambdaCode)
         const ApiUtils = new ApiHelper(APILambdas, CognitoAuthorizer, isDevelopment ? '*' : federalWebsiteOrigin)
 
+        // everything under /follower is intended to be accessed by other accounts (followers or potential followers)
         const FollowerApi = Api.root.addResource('follower')
-        ApiUtils.constructLambdaApi(FollowerApi, 'follow-request', 'POST', "follower-api-follow-request-create")
+        ApiUtils.constructLambdaApi(FollowerApi, 'follow-requests', 'POST', "follower-api-follow-request-create")
         ApiUtils.constructLambdaApi(FollowerApi, 'follow-request-response', 'POST', "follower-api-follow-request-receive-response")
         const PostsApi = ApiUtils.constructLambdaApi(FollowerApi, 'posts', 'GET', "follower-api-posts-get")
         ApiUtils.constructLambdaApiMethod(PostsApi, 'POST', "follower-api-post-create")
@@ -165,6 +191,7 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(PostActivitiesApi, '{postActivityId}', 'GET', "follower-api-post-activity-get")
         ApiUtils.constructLambdaApi(FollowerApi, 'profile', 'GET', 'follower-api-profile-get')
 
+        // everything under /internal is intended to be accessed only be the owning account
         const InternalApi = Api.root.addResource('internal')
         const FollowRequestsApi = InternalApi.addResource('follow-requests')
         ApiUtils.addCorsOptions(FollowRequestsApi)
@@ -173,6 +200,17 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(InternalApi, 'follow-request-response', 'POST', 'internal-api-follow-request-respond')
         ApiUtils.constructLambdaApi(InternalApi, 'posts', 'POST', 'internal-api-post-create')
         ApiUtils.constructLambdaApi(InternalApi, 'feed', 'GET', 'internal-api-feed-get')
+
+        /**
+         * Methods exposed under /internal/async can perform long-running tasks, such as making
+         * service calls and operating on the results. These should never be triggered directly from the website, but
+         * instead queued up and executed asynchronously from web requests.
+         */
+        const AsyncLambdas = []
+        const AsyncApiUtils = new ApiHelper(APILambdas, CognitoAuthorizer, '')
+        const InternalAsyncApi = InternalApi.addResource('async')
+        const InternalAsyncFollowRequestsApi = InternalAsyncApi.addResource('follow-requests')
+        AsyncLambdas.push(AsyncApiUtils.constructLambdaApiMethod(InternalAsyncFollowRequestsApi, 'POST', 'internal-async-api-follow-request-create'))
 
         this.constructSnsTopicSubscriptionValidation(APILambdas.constructLambda('sns-audit-new-sns-subscription'))
 
@@ -186,7 +224,7 @@ export class UserStack extends cdk.Stack {
         }));
         PostStackCreationRole.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole'))
         const PostStackCreationLambda = new LambdaFunction(this, 'PostStackCreationLambda', {
-            runtime: Runtime.NODEJS_10_X,
+            runtime: Runtime.NODEJS_12_X,
             code: LambdaCode,
             handler: 'cloudformation-post-stack-creation.handler',
             role: PostStackCreationRole
@@ -195,6 +233,7 @@ export class UserStack extends cdk.Stack {
             provider: CustomResourceProvider.fromLambda(PostStackCreationLambda),
             properties: {
                 FunctionArns: APIFunctionArns,
+                AsynchronousFunctionArns: AsyncLambdas.map(lambdaFunction => lambdaFunction.functionArn),
                 EnvironmentVariables: {
                     ...EnvironmentVariables,
                     PROFILE_EVENTS_HANDLER: ProfileEventsHandler.functionArn,

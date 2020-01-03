@@ -1,7 +1,11 @@
 import Util, {DefaultEventValues} from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
-import {FollowRequest, ReducedAccountDetails} from "@social-freedom/types";
-import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
+import {FollowRequest, ReducedAccountDetails, FollowRequestCreateResponse} from "@social-freedom/types";
+import {
+    AccountDetailsFollowersKey,
+    AccountDetailsFollowingKey,
+    AccountDetailsIncomingFollowRequestsKey
+} from "./shared/constants";
 import {isFollowingRequestingUser} from "./shared/api-gateway-event-functions";
 
 type EventValues = DefaultEventValues & {
@@ -23,13 +27,10 @@ export const handler = async (event: APIGatewayEvent): Promise<any> => {
              * TODO - validate that userId of requester matches other account details
              */
 
-            await Promise.all([
-                Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, eventValues.userId),
-                Util.putTrackedAccount(eventValues.eventBody),
-                Util.subscribeToProfileEvents(eventValues.eventBody),
-                conditionalAutoRespond(eventValues)
-            ])
+            return conditionalAutoRespond(eventValues)
         }
+
+        return undefined
     })
 };
 
@@ -42,20 +43,37 @@ export function isAFollowRequest(object: any): object is FollowRequest {
     throw new Error(`Invalid FollowRequestResponse: ${JSON.stringify(object)}`)
 }
 
-export const conditionalAutoRespond = async (eventValues: EventValues) => {
+export const conditionalAutoRespond = async (eventValues: EventValues): Promise<FollowRequestCreateResponse> => {
     // TODO - implement auto-denied condition (e.g. blocked account)
     const autoDenied = false
     if (autoDenied) {
-        return Util.apiRequest(eventValues.thisAccountDetails.apiOrigin, '', eventValues.authToken, 'POST', {
-            userId: eventValues.userId,
-            accepted: false
-        })
+        return {
+            response: {
+                accepted: false
+            }
+        }
     } else if (eventValues.isAccountPublic || eventValues.isFollowing) {
-        return Util.apiRequest(eventValues.thisAccountDetails.apiOrigin, '', eventValues.authToken, 'POST', {
-            userId: eventValues.userId,
-            accepted: false
-        })
+        await Promise.all([
+            Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, eventValues.userId),
+            Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, eventValues.userId),
+            Util.putTrackedAccount(eventValues.eventBody),
+            Util.subscribeToProfileEvents(eventValues.eventBody),
+            Util.subscribeToPostEvents(eventValues.eventBody)
+        ])
+
+        return {
+            response: {
+                accepted: true,
+                accountDetails: eventValues.thisAccountDetails
+            }
+        }
     }
 
-    return Promise.resolve()
+    // no auto-response
+    await Promise.all([
+        Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, eventValues.userId),
+        Util.putTrackedAccount(eventValues.eventBody),
+        Util.subscribeToProfileEvents(eventValues.eventBody)
+    ])
+    return {}
 }

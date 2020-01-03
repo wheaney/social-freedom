@@ -21,13 +21,17 @@ export const handler = async (event:CloudFormationCustomResourceEvent): Promise<
     }
     let response:CloudFormationCustomResourceResponse = successResponse
     if (isCreateEvent(event) || isUpdateEvent(event)) {
+        const AsynchronousFunctionArns = new Set<string>(event.ResourceProperties.AsynchronousFunctionArns ?? [])
         try {
             const Lambda = new AWS.Lambda()
             await Promise.all(event.ResourceProperties.FunctionArns.map((functionArn: string) => {
                 return Lambda.updateFunctionConfiguration({
                     FunctionName: functionArn,
                     Environment: {
-                        Variables: event.ResourceProperties.EnvironmentVariables as EnvironmentVariables
+                        Variables: {
+                            ...event.ResourceProperties.EnvironmentVariables as EnvironmentVariables,
+                            ALLOW_SYNCHRONOUS_API_REQUESTS: AsynchronousFunctionArns.has(functionArn) ? "true" : "false"
+                        }
                     }
                 }).promise()
             }))

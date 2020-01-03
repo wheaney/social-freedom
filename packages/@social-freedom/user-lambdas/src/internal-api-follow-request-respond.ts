@@ -6,14 +6,13 @@ import {
     AccountDetailsIncomingFollowRequestsKey,
     AccountDetailsOutgoingFollowRequestsKey
 } from "./shared/constants";
-import {isFollowingRequestingUser} from "./shared/api-gateway-event-functions";
 
 const EventFunctions = {
     requestExists: requestExists,
     requesterDetails: requesterDetails,
     thisAccountDetails: Util.getThisAccountDetails,
     isThisAccountPublic: Util.isAccountPublic,
-    isAlreadyFollowingUser: isFollowingRequestingUser
+    isAlreadyFollowingUser: isAlreadyFollowing
 }
 
 type EventValues = DefaultEventValues & {
@@ -57,24 +56,32 @@ export async function requesterDetails(event: APIGatewayEvent, request: any) {
     return undefined
 }
 
+export async function isAlreadyFollowing(event: APIGatewayEvent, request: any) {
+    if (isAnInternalFollowResponse(request)) {
+        return Util.isFollowing(request.userId)
+    }
+
+    return undefined
+}
+
 export const internalFollowRequestRespond = async (eventValues: EventValues) => {
     const {eventBody, authToken, requestExists, requesterDetails, thisAccountDetails, isThisAccountPublic, isAlreadyFollowingUser} = eventValues
     if (isAnInternalFollowResponse(eventBody) && requestExists && requesterDetails) {
-        await Util.apiRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', authToken,
+        const promises = []
+        promises.push(Util.queueAPIRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', authToken,
             'POST', {
                 accepted: eventBody.accepted,
                 accountDetails: eventBody.accepted ? thisAccountDetails : undefined
-            })
+            }))
 
-        const promises = []
         if (eventBody.accepted) {
             promises.push(Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, eventBody.userId))
 
             if (!isThisAccountPublic && !isAlreadyFollowingUser) {
                 promises.push(
                     Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, eventBody.userId),
-                    Util.apiRequest(requesterDetails.apiOrigin, 'follower/follow-request',
-                        authToken, 'POST', thisAccountDetails))
+                    Util.queueAPIRequest(process.env.API_ORIGIN, 'internal/async/follow-requests',
+                        authToken, 'POST', requesterDetails))
             }
         }
 

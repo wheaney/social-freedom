@@ -22,7 +22,7 @@ export default class LambdaHelper {
 
         // Lambda references assume that tsc has compiled all *.ts files to the dist directory
         const lambda = new LambdaFunction(this.stack, handler, {
-            runtime: Runtime.NODEJS_10_X,
+            runtime: Runtime.NODEJS_12_X,
             code: this.code,
             handler: `${handler}.handler`,
             role: this.role,

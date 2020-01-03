@@ -7,13 +7,12 @@ import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
     AccountDetailsIsPublicKey,
-    AuthTokenHeaderName, ConditionalCheckFailedCode,
+    AuthTokenHeaderName,
+    ConditionalCheckFailedCode,
     FeedTablePartitionKey
 } from "./constants";
-import {FeedEntry, Profile, ReducedAccountDetails} from "@social-freedom/types";
+import {FeedEntry, Profile, ReducedAccountDetails, UserDetails} from "@social-freedom/types";
 import fetch from 'node-fetch';
-import {Response} from 'node-fetch';
-import {UserDetails} from "@social-freedom/types";
 import {getAuthToken, getUserId, isFollowingRequestingUser} from "./api-gateway-event-functions";
 
 export type APIGatewayEventFunction = (event: APIGatewayEvent, eventBody: any) => any;
@@ -131,10 +130,30 @@ const Util = {
         return process.env.USER_ID === userId || await Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, userId)
     },
 
+    queueAPIRequest: async (origin: string, path: string, authToken: string,
+                            requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
+                            requestBody?: any) => {
+        return new AWS.SQS().sendMessage({
+            QueueUrl: process.env.API_REQUESTS_QUEUE_URL,
+            MessageGroupId: 'api-requests',
+            MessageBody: JSON.stringify({
+                origin: origin,
+                path: path,
+                authToken: authToken,
+                requestMethod: requestMethod,
+                requestBody: requestBody
+            })
+        }).promise()
+    },
+
     apiRequest: async (origin: string, path: string, authToken: string,
                                      requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
-                                     requestBody?: any): Promise<Response> => {
-        // TODO - these requests should be queued and processed outside of synchronous API Gateway lambda functions
+                                     requestBody?: any): Promise<any> => {
+        if (process.env.ALLOW_SYNCHRONOUS_API_REQUESTS !== "true") {
+            // lambdas triggered directly by API Gateway should being queueing these requests
+            throw new Error('Synchronous API requests not allowed within this function')
+        }
+
         const startTime = Date.now()
         const requestBodyString: string = ['POST', 'PUT'].includes(requestMethod) && requestBody && JSON.stringify(requestBody)
         const additionalRequestHeaders = !!requestBodyString && {
@@ -156,7 +175,14 @@ const Util = {
 
         console.log(`apiRequest for ${path} took ${Date.now() - startTime}`)
 
-        return res
+        const responseBody = await res.text()
+        if (responseBody?.length) {
+            try {
+                return JSON.parse(responseBody)
+            } catch (err) {
+                console.error(`Unexpected response body: ${responseBody}`)
+            }
+        }
     },
 
     getTrackedAccountDetails: async (userId: string): Promise<ReducedAccountDetails> => {

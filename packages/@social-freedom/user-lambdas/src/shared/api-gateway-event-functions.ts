@@ -10,6 +10,7 @@ export function getAuthToken(event: APIGatewayEvent) {
     return event.headers[AuthTokenHeaderName]
 }
 
+// should only be used within follower-api lambdas
 export async function isFollowingRequestingUser(event: APIGatewayEvent) {
     return Util.isFollowing(getUserId(event))
 }

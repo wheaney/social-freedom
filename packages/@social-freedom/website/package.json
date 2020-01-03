@@ -1,6 +1,6 @@
 {
   "name": "@social-freedom/website",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Static front-end website for the social-freedom project",
   "scripts": {
     "start": "react-scripts start",
@@ -27,7 +27,7 @@
     "semantic-ui-react": "^0.88.2"
   },
   "devDependencies": {
-    "@social-freedom/types": "^0.0.7",
+    "@social-freedom/types": "^0.0.8",
     "@types/jest": "24.0.25",
     "@types/node": "13.1.2",
     "@types/react": "16.9.17",
