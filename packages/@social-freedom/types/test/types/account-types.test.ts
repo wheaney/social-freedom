@@ -1,5 +1,6 @@
 import TypeUtils from "../../src/type-utils";
 import {isReducedAccountDetails} from "../../src";
+import {TestObject} from "./shared";
 
 const isTypeMock = jest.spyOn(TypeUtils, 'isType')
 
@@ -7,12 +8,6 @@ afterAll((done) => {
     jest.restoreAllMocks()
     done()
 })
-
-const TestObject = {
-    foo: 'bar',
-    asdf: 'qwer',
-    baz: null as string
-}
 
 describe('isReducedAccountDetails', () => {
     it('should delegate to TypeUtils.isType', () => {

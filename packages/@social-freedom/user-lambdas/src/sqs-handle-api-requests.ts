@@ -1,6 +1,6 @@
 import {SQSEvent} from "aws-lambda";
-import {APIRequestMessage} from "@social-freedom/types";
 import Util from "./shared/util";
+import {isAPIRequestMessage} from "@social-freedom/types";
 
 
 export const handler = async (event:SQSEvent) => {
@@ -10,12 +10,4 @@ export const handler = async (event:SQSEvent) => {
             await Util.apiRequest(request.origin, request.path, request.authToken, request.requestMethod, request.requestBody)
         }
     }
-}
-
-function isAPIRequestMessage(object: any): object is APIRequestMessage {
-    if (Util.hasAllFields(object, ['origin', 'path', 'authToken', 'requestMethod'])) {
-        return true
-    }
-
-    throw new Error(`Invalid APIRequestMessage: ${object}`)
 }

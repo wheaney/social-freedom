@@ -49,3 +49,7 @@ export function isFollowRequestCreateResponse(object: any): object is FollowRequ
 
     return TypeUtils.failedCheck('FollowRequestCreateResponse', object)
 }
+
+export function isInternalFollowResponse(object: any): object is InternalFollowResponse {
+    return TypeUtils.isType('InternalFollowResponse', object, 'userId', 'accepted')
+}

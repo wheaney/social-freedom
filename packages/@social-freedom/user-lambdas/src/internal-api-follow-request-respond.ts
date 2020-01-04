@@ -1,6 +1,6 @@
 import {APIGatewayEvent} from "aws-lambda";
 import Util, {DefaultEventValues} from "./shared/util";
-import {InternalFollowResponse, ReducedAccountDetails} from "@social-freedom/types";
+import {isInternalFollowResponse, ReducedAccountDetails} from "@social-freedom/types";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsIncomingFollowRequestsKey,
@@ -31,17 +31,8 @@ export const handler = async (event: APIGatewayEvent) => {
     })
 };
 
-// TODO - replace with generic type checker, could use something like ts-transformer-keys module
-export function isAnInternalFollowResponse(object: any): object is InternalFollowResponse {
-    if (Util.isNotNullish(object.userId) && Util.isNotNullish(object.accepted)) {
-        return true
-    }
-
-    throw new Error(`Invalid InternalFollowResponse: ${JSON.stringify(object)}`)
-}
-
 export async function requestExists(event: APIGatewayEvent, request: any) {
-    if (isAnInternalFollowResponse(request)) {
+    if (isInternalFollowResponse(request)) {
         return Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, request.userId)
     }
 
@@ -49,7 +40,7 @@ export async function requestExists(event: APIGatewayEvent, request: any) {
 }
 
 export async function requesterDetails(event: APIGatewayEvent, request: any) {
-    if (isAnInternalFollowResponse(request)) {
+    if (isInternalFollowResponse(request)) {
         return Util.getTrackedAccountDetails(request.userId)
     }
 
@@ -57,7 +48,7 @@ export async function requesterDetails(event: APIGatewayEvent, request: any) {
 }
 
 export async function isAlreadyFollowing(event: APIGatewayEvent, request: any) {
-    if (isAnInternalFollowResponse(request)) {
+    if (isInternalFollowResponse(request)) {
         return Util.isFollowing(request.userId)
     }
 
@@ -66,7 +57,7 @@ export async function isAlreadyFollowing(event: APIGatewayEvent, request: any) {
 
 export const internalFollowRequestRespond = async (eventValues: EventValues) => {
     const {eventBody, authToken, requestExists, requesterDetails, thisAccountDetails, isThisAccountPublic, isAlreadyFollowingUser} = eventValues
-    if (isAnInternalFollowResponse(eventBody) && requestExists && requesterDetails) {
+    if (isInternalFollowResponse(eventBody) && requestExists && requesterDetails) {
         const promises = []
         promises.push(Util.queueAPIRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', authToken,
             'POST', {

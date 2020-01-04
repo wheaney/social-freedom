@@ -6,6 +6,7 @@ export const FeedTablePartitionKey = "Feed"
 export const AccountDetailsIsPublicKey = "IsPublic"
 export const AccountDetailsIncomingFollowRequestsKey = "IncomingFollowRequests"
 export const AccountDetailsOutgoingFollowRequestsKey = "OutgoingFollowRequests"
+export const AccountDetailsRejectedFollowRequestsKey = "RejectedFollowRequests"
 export const AccountDetailsFollowersKey = "Followers"
 export const AccountDetailsFollowingKey = "Following"
 

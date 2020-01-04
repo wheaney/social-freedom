@@ -2,8 +2,15 @@ import {
     isFollowRequest,
     isFollowRequestCreateResponse,
     isFollowRequestResponse,
+    isInternalFollowResponse,
     ReducedAccountDetails
 } from "../../src";
+import TypeUtils from "../../src/type-utils";
+
+afterAll((done) => {
+    jest.restoreAllMocks()
+    done()
+})
 
 const CompleteAccountDetails: ReducedAccountDetails = {
     userId: 'userId',
@@ -71,5 +78,17 @@ describe('isFollowRequestCreateResponse', () => {
                 }
             }
         )).toBe(true)
+    })
+})
+
+describe('isInternalFollowResponse', () => {
+    it('should delegate to TypeUtils.isType', () => {
+        const isTypeMock = jest.spyOn(TypeUtils, 'isType')
+        isTypeMock.mockReturnValue(true)
+        expect(isInternalFollowResponse(CompleteAccountDetails)).toBe(true)
+
+        isTypeMock.mockReturnValue(false)
+        expect(isInternalFollowResponse(CompleteAccountDetails)).toBe(false)
+        expect(isTypeMock).toHaveBeenCalledWith('InternalFollowResponse', CompleteAccountDetails, 'userId', 'accepted')
     })
 })
