@@ -1,3 +1,6 @@
+import TypeUtils from "../type-utils";
+
+
 export type Profile = {
     name: string,
     photoUrl?: string,
@@ -46,4 +49,9 @@ export type AccountPreferences = {
     visibleFields: VisibleField[],
     allowExternalPosts: boolean,
     allowExternalTags: boolean
+}
+
+export function isReducedAccountDetails(object: any): object is ReducedAccountDetails {
+    return TypeUtils.isType('ReducedAccountDetails', object, 'userId', 'name', 'apiOrigin',
+        'profileTopicArn', 'postsTopicArn')
 }

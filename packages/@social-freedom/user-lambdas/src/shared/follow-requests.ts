@@ -1,36 +1,6 @@
 import Util from "./util";
 import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} from "./constants";
-import {FollowRequestResponse} from "@social-freedom/types";
-import {FollowRequest, FollowRequestCreateResponse, ReducedAccountDetails} from "@social-freedom/types";
-
-
-export function isReducedAccountDetails(object: any): object is ReducedAccountDetails {
-    if (!!object.userId && !!object.name && !!object.apiOrigin && !!object.profileTopicArn && !!object.postsTopicArn) {
-        return true
-    }
-
-    throw new Error(`Invalid object ${object}`)
-}
-
-export function isFollowRequest(object: any): object is FollowRequest {
-    return isReducedAccountDetails(object)
-}
-
-export function isFollowRequestResponse(object: any): object is FollowRequestResponse {
-    if (object.accepted !== undefined && (!object.accepted || !!object.accountDetails)) {
-        return true
-    }
-
-    throw new Error(`Invalid FollowRequestResponse ${object}`)
-}
-
-export function isFollowRequestCreateResponse(object: any): object is FollowRequestCreateResponse {
-    if (!object.response || isFollowRequestResponse(object.response)) {
-        return true
-    }
-
-    throw new Error(`Invalid FollowRequestCreateResponse ${JSON.stringify(object)}`)
-}
+import {FollowRequest, FollowRequestResponse, isFollowRequestCreateResponse} from "@social-freedom/types";
 
 export const handleFollowRequestResponse = async (response: FollowRequestResponse) => {
     // TODO - verify response account details
