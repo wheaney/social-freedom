@@ -1,13 +1,14 @@
 import * as uuid from "uuid";
 import * as AWS from "aws-sdk";
 import Util from "./shared/util";
+import APIGateway from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
 import {FeedEntry, PostDetails} from "@social-freedom/types";
 
 export const handler = async (event:APIGatewayEvent) => {
-    return await Util.apiGatewayProxyWrapper(async () => {
-        const eventValues = await Util.internalAPIIdentityCheck(event)
+    return await APIGateway.proxyWrapper(async () => {
+        const eventValues = await APIGateway.internalAPIIdentityCheck(event)
 
         await putPost({
             ...eventValues.eventBody,

@@ -2,7 +2,6 @@ import {PromiseResult} from "aws-sdk/lib/request";
 import {AttributeMap, GetItemOutput, Key} from "aws-sdk/clients/dynamodb";
 import * as AWS from "aws-sdk";
 import {AWSError} from "aws-sdk";
-import {APIGatewayEvent} from "aws-lambda";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
@@ -13,94 +12,12 @@ import {
 } from "./constants";
 import {FeedEntry, Profile, ReducedAccountDetails, UserDetails} from "@social-freedom/types";
 import fetch from 'node-fetch';
-import {getAuthToken, getUserId, isFollowingRequestingUser} from "./api-gateway-event-functions";
-
-export type APIGatewayEventFunction = (event: APIGatewayEvent, eventBody: any) => any;
-export type APIGatewayEventFunctions = {[key:string]:APIGatewayEventFunction};
-export type DefaultAPIGatewayEventFunctions = {
-    eventBody: APIGatewayEventFunction,
-    userId: APIGatewayEventFunction,
-    authToken: APIGatewayEventFunction
-}
-
-export type DefaultEventValues = {[key in keyof DefaultAPIGatewayEventFunctions]: any}
 
 // TODO - unit testing
 
 // TODO - split this up by service/integration
 const Util = {
     dynamoDbClient: new AWS.DynamoDB(),
-
-    apiGatewayProxyWrapper: async (proxyFunction: () => Promise<any>) => {
-        try {
-            return Util.apiGatewayLambdaResponse(200, await proxyFunction())
-        } catch (err) {
-            // TODO - add handling for unauthorized, return 401
-            console.error(err)
-            return Util.apiGatewayLambdaResponse(500)
-        }
-    },
-
-    /**
-     * Event functions front-load any async data retrieval/computation that can operate on just the APIGatewayEvent
-     * object. All async functions will be awaited in parallel; any logic that *can* be put here should -- even if it
-     * may only be conditionally used -- ideally resulting in one front-loaded await here and at most one more await
-     * for any conditional update/delete operations. This will keep request processing to an ideal of only two awaits.
-     *
-     * @param event - the incoming request's APIGatewayEvent
-     * @param eventFunctions - functions that do data retrieval or compute on the event, no update/delete operations
-     *                         should occur here
-     */
-    resolveEventValues: async <T extends APIGatewayEventFunctions, U extends DefaultEventValues & { [key in keyof T]: any }>(event: APIGatewayEvent, eventFunctions: T = {} as T): Promise<U> => {
-        const resolvedValues: any = {}
-
-        // add defaults that are used frequently and aren't asynchronous
-        const eventBody = event.body ? JSON.parse(event.body) : undefined
-        type AllEventFunctions = T & DefaultAPIGatewayEventFunctions
-        const allEventFunctions: AllEventFunctions = {
-            eventBody: () => eventBody,
-            userId: getUserId,
-            authToken: getAuthToken,
-            ...eventFunctions
-        }
-
-        Object.keys(allEventFunctions).map((key: keyof AllEventFunctions) => {
-            resolvedValues[key] = allEventFunctions[key](event, eventBody)
-        })
-
-        return await Util.resolveInObject(resolvedValues)
-    },
-
-    internalAPIIdentityCheck: async <T extends APIGatewayEventFunctions, U extends DefaultEventValues & { [key in keyof T]: any }>(event: APIGatewayEvent, eventFunctions: T = {} as T): Promise<U> => {
-        if (process.env.USER_ID !== getUserId(event)) {
-            throw new Error(`Unauthorized userId: ${getUserId(event)}`)
-        }
-
-        return Util.resolveEventValues(event, eventFunctions)
-    },
-
-    followerAPIIdentityCheck: async <T extends APIGatewayEventFunctions, U extends DefaultEventValues & { [key in keyof T]: any }>(event: APIGatewayEvent, eventFunctions: T = {} as T): Promise<U> => {
-        const resolvedEventValues: U = await Util.resolveEventValues(event, {
-            ...eventFunctions,
-            isFollowing: isFollowingRequestingUser
-        })
-        if (!resolvedEventValues.isFollowing) {
-            throw new Error(`Unauthorized userId: ${resolvedEventValues.userId}`)
-        }
-
-        return resolvedEventValues
-    },
-
-    apiGatewayLambdaResponse: (httpStatus: number = 200, responseBody?: any) => {
-        return {
-            statusCode: httpStatus.toString(),
-            body: responseBody ? JSON.stringify(responseBody) : '',
-            isBase64Encoded: false,
-            headers: {
-                'Access-Control-Allow-Origin': process.env.CORS_ORIGIN
-            }
-        }
-    },
 
     isAccountPublic: async (): Promise<boolean> => {
         const isAccountPublicItem: PromiseResult<GetItemOutput, AWSError> = await Util.dynamoDbClient.getItem({
@@ -427,10 +344,6 @@ const Util = {
 
     isNotNullish: (object: any) => {
         return object !== null && object !== undefined
-    },
-
-    hasAllFields: (object: any, fields: string[]): boolean => {
-        return !fields.find(field => Util.isNullish(object[field]))
     }
 }
 

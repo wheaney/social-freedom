@@ -1,12 +1,14 @@
-import Util, {DefaultEventValues} from "./shared/util";
+import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {FollowRequestCreateResponse, isFollowRequest, ReducedAccountDetails} from "@social-freedom/types";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
-    AccountDetailsIncomingFollowRequestsKey, AccountDetailsRejectedFollowRequestsKey
+    AccountDetailsIncomingFollowRequestsKey,
+    AccountDetailsRejectedFollowRequestsKey
 } from "./shared/constants";
 import {getUserId, isFollowingRequestingUser} from "./shared/api-gateway-event-functions";
+import APIGateway, {DefaultEventValues} from "./shared/api-gateway";
 
 type EventValues = DefaultEventValues & {
     isFollowing: boolean,
@@ -16,8 +18,8 @@ type EventValues = DefaultEventValues & {
 }
 
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
-    return await Util.apiGatewayProxyWrapper(async () => {
-        const eventValues: EventValues = await Util.resolveEventValues(event, {
+    return await APIGateway.proxyWrapper(async () => {
+        const eventValues: EventValues = await APIGateway.resolveEventValues(event, {
             isFollowing: isFollowingRequestingUser,
             isAccountPublic: Util.isAccountPublic,
             thisAccountDetails: Util.getThisAccountDetails,

@@ -1,4 +1,5 @@
-import Util, {DefaultEventValues} from "./shared/util";
+import Util from "./shared/util";
+import APIGateway, {DefaultEventValues} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
 import {FollowRequestsResponse} from "@social-freedom/types";
@@ -10,8 +11,8 @@ type EventValues = DefaultEventValues & {
 }
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await Util.apiGatewayProxyWrapper(async () => {
-        const eventValues: EventValues = await Util.internalAPIIdentityCheck(event, {
+    return await APIGateway.proxyWrapper(async () => {
+        const eventValues: EventValues = await APIGateway.internalAPIIdentityCheck(event, {
             cachedUsers: cachedUsers,
             incomingFollowRequests: incomingFollowRequests
         })

@@ -1,11 +1,12 @@
 import Util from "./shared/util";
+import APIGateway from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {FeedTablePartitionKey} from "./shared/constants";
 import {FeedEntryOperation, FeedEntryType, GetFeedRequest, GetFeedResponse} from "@social-freedom/types";
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await Util.apiGatewayProxyWrapper(async () => {
-        await Util.internalAPIIdentityCheck(event)
+    return await APIGateway.proxyWrapper(async () => {
+        await APIGateway.internalAPIIdentityCheck(event)
 
         const params = event.queryStringParameters
         return await feedGet(params ? {

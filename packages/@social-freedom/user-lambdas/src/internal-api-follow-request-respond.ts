@@ -1,5 +1,6 @@
 import {APIGatewayEvent} from "aws-lambda";
-import Util, {DefaultEventValues} from "./shared/util";
+import Util from "./shared/util";
+import APIGateway, {DefaultEventValues} from "./shared/api-gateway";
 import {isInternalFollowResponse, ReducedAccountDetails} from "@social-freedom/types";
 import {
     AccountDetailsFollowersKey,
@@ -24,8 +25,8 @@ type EventValues = DefaultEventValues & {
 }
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await Util.apiGatewayProxyWrapper(async () => {
-        const eventValues: EventValues = await Util.internalAPIIdentityCheck(event, EventFunctions)
+    return await APIGateway.proxyWrapper(async () => {
+        const eventValues: EventValues = await APIGateway.internalAPIIdentityCheck(event, EventFunctions)
 
         await internalFollowRequestRespond(eventValues)
     })
