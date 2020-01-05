@@ -19,7 +19,11 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": "./dist",
     "typeRoots": ["./node_modules/@types", "./node_modules/@social-freedom"],
-    "types": ["aws-lambda", "jest", "node", "types"]
+    "types": ["aws-lambda", "jest", "node", "types"],
+    "baseUrl": ".",
+    "paths": {
+      "@social-freedom/types": ["../types/src"]
+    }
   },
   "include": [
     "src/**/*"
