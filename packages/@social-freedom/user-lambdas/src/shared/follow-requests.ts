@@ -1,9 +1,5 @@
 import Util from "./util";
-import {
-    AccountDetailsFollowingKey,
-    AccountDetailsOutgoingFollowRequestsKey,
-    AccountDetailsRejectedFollowRequestsKey
-} from "./constants";
+import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} from "./constants";
 import {FollowRequest, FollowRequestResponse, isFollowRequestCreateResponse} from "@social-freedom/types";
 
 export const handleFollowRequestResponse = async (response: FollowRequestResponse) => {
@@ -17,8 +13,6 @@ export const handleFollowRequestResponse = async (response: FollowRequestRespons
             Util.subscribeToProfileEvents(response.accountDetails),
             Util.subscribeToPostEvents(response.accountDetails)
         )
-    } else {
-        promises.push(Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsRejectedFollowRequestsKey, response.accountDetails.userId))
     }
 
     return Promise.all(promises)

@@ -73,7 +73,7 @@ const APIGateway = {
         return resolvedEventValues
     },
 
-    lambdaResponse: (httpStatus: number = 200, responseBody?: any) => {
+    lambdaResponse: (httpStatus: number, responseBody?: any) => {
         return {
             statusCode: httpStatus.toString(),
             body: responseBody ? JSON.stringify(responseBody) : '',

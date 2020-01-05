@@ -3,11 +3,11 @@ import {AuthTokenHeaderName} from "./constants";
 import Util from "./util";
 
 export function getUserId(event: APIGatewayEvent) {
-    return event.requestContext.authorizer.claims.sub
+    return event?.requestContext?.authorizer?.claims?.sub
 }
 
 export function getAuthToken(event: APIGatewayEvent) {
-    return event.headers[AuthTokenHeaderName]
+    return event?.headers?.[AuthTokenHeaderName]
 }
 
 // should only be used within follower-api lambdas
@@ -16,7 +16,5 @@ export async function isFollowingRequestingUser(event: APIGatewayEvent) {
 }
 
 export async function cachedUsers(event: APIGatewayEvent) {
-    const params = event.queryStringParameters
-
-    return params && params['cachedUsers'] && params['cachedUsers'].split(",") || []
+    return event?.queryStringParameters?.['cachedUsers']?.split(",") ?? []
 }

@@ -2,10 +2,7 @@ import Util from "../src/shared/util";
 import {internalFollowRequestCreate} from "../src/internal-api-follow-request-create";
 import {
     FollowingAccountDetails,
-    FollowingAccountDetailsFull,
-    setupEnvironmentVariables,
-    ThisAccountDetails,
-    ThisAccountDetailsFull
+    setupEnvironmentVariables
 } from "./test-utils";
 import {AccountDetailsOutgoingFollowRequestsKey} from "../src/shared/constants";
 
@@ -22,25 +19,13 @@ beforeEach(done => {
     done()
 })
 
-describe("the internal FollowRequestCreate handler", () => {
-    it("should retrieve account details, if none provided", async () => {
-        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
-
-        await internalFollowRequestCreate('authToken', FollowingAccountDetailsFull)
+describe("internalFollowRequestCreate", () => {
+    it("should queue up the outgoing request", async () => {
+        await internalFollowRequestCreate('authToken', FollowingAccountDetails)
 
         expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'followingUserId')
-        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalledWith(FollowingAccountDetailsFull)
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('apiDomainName', '/follower/follow-request-create',
-            'authToken', 'POST', ThisAccountDetails)
-    })
-
-    it("should use account details that are provided", async () => {
-        await internalFollowRequestCreate('authToken', ThisAccountDetailsFull, FollowingAccountDetails)
-
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'someUserId')
-        expect(mockedUtil.putTrackedAccountDetails).toHaveBeenCalled()
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('myApiDomain.com', '/follower/follow-request-create',
+        expect(mockedUtil.putTrackedAccount).toHaveBeenCalledWith(FollowingAccountDetails)
+        expect(mockedUtil.queueAPIRequest).toHaveBeenCalledWith('myApiDomain.com', 'internal/async/follow-requests',
             'authToken', 'POST', FollowingAccountDetails)
-        expect(mockedUtil.getThisAccountDetails).not.toHaveBeenCalled()
     })
 })

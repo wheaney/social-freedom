@@ -5,7 +5,7 @@ import {isInternalFollowResponse, ReducedAccountDetails} from "@social-freedom/t
 import {
     AccountDetailsFollowersKey,
     AccountDetailsIncomingFollowRequestsKey,
-    AccountDetailsOutgoingFollowRequestsKey
+    AccountDetailsOutgoingFollowRequestsKey, AccountDetailsRejectedFollowRequestsKey
 } from "./shared/constants";
 
 const EventFunctions = {
@@ -75,6 +75,8 @@ export const internalFollowRequestRespond = async (eventValues: EventValues) => 
                     Util.queueAPIRequest(process.env.API_ORIGIN, 'internal/async/follow-requests',
                         authToken, 'POST', requesterDetails))
             }
+        } else {
+            promises.push(Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsRejectedFollowRequestsKey, eventBody.userId))
         }
 
         promises.push(Util.removeFromDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, eventBody.userId))

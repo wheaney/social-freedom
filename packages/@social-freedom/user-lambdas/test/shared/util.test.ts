@@ -1,7 +1,7 @@
 import * as AWSMock from "aws-sdk-mock";
 import {SubscribeInput} from "aws-sdk/clients/sns";
 import Util from "../../src/shared/util";
-import {FollowingAccountDetailsFull, setupEnvironmentVariables} from "../test-utils";
+import {FollowingAccountDetails, FollowingAccountDetailsFull, setupEnvironmentVariables} from "../test-utils";
 import * as AWS from "aws-sdk";
 
 beforeAll(async (done) => {
@@ -15,23 +15,19 @@ beforeEach(async (done) => {
     done()
 })
 
-afterEach(async (done) => {
-    done()
-})
-
 describe("the subscribeToProfileUpdates function", () => {
     it("should make a subscribe request to SNS", async () => {
         AWSMock.mock('SNS', 'subscribe', (params: SubscribeInput, callback: Function) => {
             expect(params).toStrictEqual({
-                TopicArn: 'arn:aws:sns:followingRegion:followingAccountId:ProfileUpdates-followingUserId',
-                Endpoint: 'profileUpdateHandlerArn',
+                TopicArn: 'profileTopicArn',
+                Endpoint: 'profileEventsHandlerArn',
                 Protocol: 'lambda'
             })
 
             callback(null, {});
         })
 
-        await Util.subscribeToProfileEvents(FollowingAccountDetailsFull)
+        await Util.subscribeToProfileEvents(FollowingAccountDetails)
 
         AWSMock.restore('SNS')
     })
@@ -44,10 +40,12 @@ describe("the getThisAccountDetails function", () => {
 
         const thisAccountDetails = await Util.getThisAccountDetails()
         expect(thisAccountDetails).toStrictEqual({
-            userId: "someUserId",
+            userId: "thisUserId",
             apiOrigin: "myApiDomain.com",
             name: "Following User",
-            photoUrl: "followingUserPhoto"
+            photoUrl: "followingUserPhoto",
+            postsTopicArn: "postsTopic",
+            profileTopicArn: "profileTopic"
         })
 
         expect(mockedGetProfile).toHaveBeenCalled()

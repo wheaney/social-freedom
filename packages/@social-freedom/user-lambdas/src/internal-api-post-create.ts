@@ -1,10 +1,9 @@
 import * as uuid from "uuid";
-import * as AWS from "aws-sdk";
-import Util from "./shared/util";
 import APIGateway from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
 import {FeedEntry, PostDetails} from "@social-freedom/types";
+import Util from "./shared/util";
 
 export const handler = async (event:APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {
@@ -19,8 +18,8 @@ export const handler = async (event:APIGatewayEvent) => {
 
 export const putPost = async (post:PostDetails) => {
     // Add post to DynamoDB "posts" table
-    const timestamp:number = new Date(Date.now()).getTime()
-    post.id = post.id || uuid.v1()
+    const timestamp:number = Date.now()
+    post.id = post.id ?? uuid.v1()
     await Util.dynamoDbClient.putItem({
         TableName: process.env.POSTS_TABLE,
         Item: {
@@ -44,7 +43,7 @@ export const putPost = async (post:PostDetails) => {
         userId: process.env.USER_ID,
         body: post
     }
-    await new AWS.SNS().publish({
+    await Util.snsClient.publish({
         TopicArn: process.env.POSTS_TOPIC,
         Message: JSON.stringify(feedEntry)
     }).promise()

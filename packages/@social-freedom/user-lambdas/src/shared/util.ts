@@ -18,6 +18,7 @@ import fetch from 'node-fetch';
 // TODO - split this up by service/integration
 const Util = {
     dynamoDbClient: new AWS.DynamoDB(),
+    snsClient: new AWS.SNS(),
 
     isAccountPublic: async (): Promise<boolean> => {
         const isAccountPublicItem: PromiseResult<GetItemOutput, AWSError> = await Util.dynamoDbClient.getItem({

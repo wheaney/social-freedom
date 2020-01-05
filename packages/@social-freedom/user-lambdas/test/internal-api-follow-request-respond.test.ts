@@ -1,27 +1,28 @@
-import * as InternalFollowRequestCreate
-    from "../src/internal-api-follow-request-create";
+import {FollowingAccountDetails, setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
+import * as Types from "@social-freedom/types"
+import {internalFollowRequestRespond} from "../src/internal-api-follow-request-respond";
 import Util from "../src/shared/util";
 import {
     AccountDetailsFollowersKey,
-    AccountDetailsIncomingFollowRequestsKey
+    AccountDetailsIncomingFollowRequestsKey,
+    AccountDetailsOutgoingFollowRequestsKey, AccountDetailsRejectedFollowRequestsKey
 } from "../src/shared/constants";
-import {internalFollowRequestRespond} from "../src/internal-api-follow-request-respond";
-import {FollowingAccountDetailsFull, setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
+
+jest.mock("@social-freedom/types")
+const mockedTypes = Types as jest.Mocked<typeof Types>
 
 jest.mock("../src/shared/util")
 const mockedUtil = Util as jest.Mocked<typeof Util>
 
-const mockedConsoleError = jest.fn()
-jest.spyOn(global.console, 'error').mockImplementation(mockedConsoleError)
-
-const mockedRequestCreate = jest.fn() as jest.MockedFunction<typeof InternalFollowRequestCreate.internalFollowRequestCreate>
-jest.spyOn(InternalFollowRequestCreate, 'internalFollowRequestCreate').mockImplementation(mockedRequestCreate)
-
-async function invokeHandler(accepted: boolean) {
-    return await internalFollowRequestRespond("authToken", {
-        userId: "userId",
-        accepted: accepted
-    })
+const testEventValues = {
+    userId: 'thisUserId',
+    authToken: 'authToken',
+    eventBody: { accepted: true, userId: 'otherUserId' },
+    requestExists: true,
+    requesterDetails: FollowingAccountDetails,
+    thisAccountDetails: ThisAccountDetails,
+    isThisAccountPublic: false,
+    isAlreadyFollowingUser: false
 }
 
 beforeAll(async (done) => {
@@ -31,6 +32,7 @@ beforeAll(async (done) => {
 
 beforeEach(async (done) => {
     jest.clearAllMocks()
+    mockedTypes.isInternalFollowResponse.mockReturnValue(true)
     done()
 });
 
@@ -38,95 +40,90 @@ afterEach(async (done) => {
     done()
 })
 
-describe("the internal FollowRequestRespond handler", () => {
-    it("should do nothing if a matching request isn't found", async () => {
-        mockedUtil.dynamoSetContains.mockResolvedValue(false)
-
-        await invokeHandler(false)
-
-        expect(mockedConsoleError).toHaveBeenCalledWith('Received invalid InternalFollowResponse', {
-            requestExists: false,
-            requesterDetailsExists: false
-        })
-        expect(mockedUtil.apiRequest).not.toHaveBeenCalled()
-    });
-
-    it("should do nothing if a request account details aren't found", async () => {
-        mockedUtil.dynamoSetContains.mockResolvedValue(true)
-        mockedUtil.getTrackedAccountDetails.mockResolvedValue(undefined)
-
-        await invokeHandler(false)
-
-        expect(mockedConsoleError).toHaveBeenCalledWith('Received invalid InternalFollowResponse', {
-            requestExists: true,
-            requesterDetailsExists: false
-        })
-        expect(mockedUtil.apiRequest).not.toHaveBeenCalled()
-    });
-
-    it("should reject and remove the follow request, if not accepted", async () => {
-        mockedUtil.dynamoSetContains.mockResolvedValue(true)
-        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetailsFull)
-
-        await invokeHandler(false)
-
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('apiDomainName', '/follower/follow-request-response',
-            'authToken', 'POST', {
-                accepted: false
+describe("internalFollowRequestRespond", () => {
+    it("should do nothing if a matching request or requester details aren't found", async () => {
+        try {
+            await internalFollowRequestRespond({
+                ...testEventValues,
+                requestExists: false
             })
-        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'userId')
+        } catch (err) {
+            expect(err).toStrictEqual({
+                requestExists: false,
+                requesterDetails: FollowingAccountDetails
+            })
+        }
+
+        try {
+            await internalFollowRequestRespond({
+                ...testEventValues,
+                requesterDetails: undefined
+            })
+        } catch (err) {
+            expect(err).toStrictEqual({
+                requestExists: true,
+                requesterDetails: undefined
+            })
+        }
     });
 
-    it("should accept and remove the follow request and add a Followers entry, if accepted", async () => {
-        mockedUtil.dynamoSetContains.mockResolvedValue(true)
-        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetailsFull)
-        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
-        mockedUtil.isAccountPublic.mockResolvedValue(true)
+    it('should reciprocate if accepting', async () => {
+        await internalFollowRequestRespond(testEventValues)
 
-        await invokeHandler(true)
-
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'userId')
-        expect(mockedUtil.apiRequest).toHaveBeenCalledWith('apiDomainName', '/follower/follow-request-response',
-            'authToken', 'POST', {
+        expect(mockedUtil.queueAPIRequest.mock.calls).toMatchObject([
+            ['apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
                 accepted: true,
                 accountDetails: ThisAccountDetails
-            })
-        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalled()
-        expect(mockedRequestCreate).not.toHaveBeenCalled()
+            }],
+            ['myApiDomain.com', 'internal/async/follow-requests', 'authToken', 'POST', FollowingAccountDetails]
+        ])
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'otherUserId')
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'otherUserId')
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'otherUserId')
     });
 
-    it("should not automatically reciprocate follow request if already followed", async () => {
-        mockedUtil.dynamoSetContains.mockResolvedValue(true)
-        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetailsFull)
-        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
-        mockedUtil.isAccountPublic.mockResolvedValue(false)
-        mockedUtil.isFollowing.mockResolvedValue(true)
+    it('should not reciprocate if public', async () => {
+        await internalFollowRequestRespond({
+            ...testEventValues,
+            isThisAccountPublic: true
+        })
 
-        await invokeHandler(true)
+        expect(mockedUtil.queueAPIRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
+            accepted: true,
+            accountDetails: ThisAccountDetails
+        })
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'otherUserId')
+        expect(mockedUtil.addToDynamoSet).not.toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'otherUserId')
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'otherUserId')
+    })
 
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalled()
-        expect(mockedUtil.apiRequest).toHaveBeenCalled()
-        expect(mockedUtil.isFollowing).toHaveBeenCalledWith("userId")
-        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalled()
-        expect(mockedRequestCreate).not.toHaveBeenCalled()
-    });
+    it('should not reciprocate if already following', async () => {
+        await internalFollowRequestRespond({
+            ...testEventValues,
+            isAlreadyFollowingUser: true
+        })
 
-    it("should automatically reciprocate follow request if not a public account and not already followed", async () => {
-        mockedUtil.dynamoSetContains.mockResolvedValue(true)
-        mockedUtil.getTrackedAccountDetails.mockResolvedValue(FollowingAccountDetailsFull)
-        mockedUtil.getThisAccountDetails.mockResolvedValue(ThisAccountDetails)
-        mockedUtil.isAccountPublic.mockResolvedValue(false)
-        mockedUtil.isFollowing.mockResolvedValue(false)
+        expect(mockedUtil.queueAPIRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
+            accepted: true,
+            accountDetails: ThisAccountDetails
+        })
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'otherUserId')
+        expect(mockedUtil.addToDynamoSet).not.toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'otherUserId')
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'otherUserId')
+    })
 
-        await invokeHandler(true)
-
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalled()
-        expect(mockedUtil.apiRequest).toHaveBeenCalled()
-        expect(mockedUtil.isFollowing).toHaveBeenCalled()
-        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalled()
-        expect(mockedRequestCreate).toHaveBeenCalledWith('authToken', {
-            userId: 'userId',
-            ...FollowingAccountDetailsFull
-        }, ThisAccountDetails)
-    });
+    it('should track if rejected', async () => {
+        await internalFollowRequestRespond({
+            ...testEventValues,
+            eventBody: { accepted: false, userId: 'otherUserId' }
+        })
+        expect(mockedUtil.queueAPIRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
+            accepted: false,
+            accountDetails: undefined
+        })
+        expect(mockedUtil.addToDynamoSet).not.toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'otherUserId')
+        expect(mockedUtil.addToDynamoSet).not.toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'otherUserId')
+        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsRejectedFollowRequestsKey, 'otherUserId')
+        expect(mockedUtil.removeFromDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'otherUserId')
+    })
 });
