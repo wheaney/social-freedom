@@ -1,33 +1,22 @@
-import Util from "./shared/util";
-import APIGateway from "./shared/api-gateway";
+import APIGateway, {EventFunctions} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
-import {FeedTablePartitionKey} from "./shared/constants";
 import {FeedEntryOperation, FeedEntryType, GetFeedRequest, GetFeedResponse} from "@social-freedom/types";
+import TrackedAccounts from "src/daos/tracked-accounts";
+import Feed from "src/daos/feed";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {
         await APIGateway.internalAPIIdentityCheck(event)
 
-        const params = event.queryStringParameters
-        return await feedGet(params ? {
-            cachedUsers: params['cachedUsers'] && params['cachedUsers'].split(",") || [],
-            lastPostKey: params['lastPostKey']
-        } : {})
+        return await feedGet({
+            cachedUsers: EventFunctions.cachedUsers(event),
+            lastPostKey: event.queryStringParameters?.['lastPostKey']
+        })
     })
 }
 
 export const feedGet = async (request: GetFeedRequest): Promise<GetFeedResponse> => {
-    let startKey;
-    if (request.lastPostKey) {
-        const lastPostId = request.lastPostKey.substring(request.lastPostKey.indexOf('-')+1)
-        startKey = {
-            key: {S: FeedTablePartitionKey},
-            timeSortKey: {S: request.lastPostKey},
-            id: {S: lastPostId}
-        }
-    }
-    const queryResult = await Util.queryTimestampIndex(process.env.FEED_TABLE, 'FeedByTimestamp',
-        FeedTablePartitionKey, startKey)
+    const queryResult = await Feed.getEntries(request.lastPostKey)
 
     const response:GetFeedResponse = {
         users: {},
@@ -42,7 +31,7 @@ export const feedGet = async (request: GetFeedRequest): Promise<GetFeedResponse>
         lastEntryKey: queryResult.LastEvaluatedKey && queryResult.LastEvaluatedKey['timeSortKey'].S
     }
 
-    response.users = await Util.usersRequest(request.cachedUsers, response.entries.map(entry => entry.userId))
+    response.users = await TrackedAccounts.getAll(response.entries.map(entry => entry.userId), request.cachedUsers)
 
     return response
 }

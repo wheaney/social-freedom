@@ -1,9 +1,9 @@
-import Util from "./shared/util";
-import APIGateway, {DefaultEventValues} from "./shared/api-gateway";
+import APIGateway, {DefaultEventValues, EventFunctions} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
 import {FollowRequestsResponse} from "@social-freedom/types";
-import {cachedUsers} from "./shared/api-gateway-event-functions";
+import Dynamo from "src/services/dynamo";
+import TrackedAccounts from "src/daos/tracked-accounts";
 
 type EventValues = DefaultEventValues & {
     cachedUsers: string[],
@@ -13,7 +13,7 @@ type EventValues = DefaultEventValues & {
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {
         const eventValues: EventValues = await APIGateway.internalAPIIdentityCheck(event, {
-            cachedUsers: cachedUsers,
+            cachedUsers: EventFunctions.cachedUsers,
             incomingFollowRequests: incomingFollowRequests
         })
 
@@ -22,13 +22,13 @@ export const handler = async (event: APIGatewayEvent) => {
 }
 
 export async function incomingFollowRequests() {
-    return Util.getDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey)
+    return Dynamo.getAllInSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey)
 }
 
 // visible for testing
 export const followRequestsGet = async (eventValues: EventValues): Promise<FollowRequestsResponse> => {
     return {
         userIds: eventValues.incomingFollowRequests,
-        users: await Util.usersRequest(eventValues.cachedUsers, eventValues.incomingFollowRequests)
+        users: await TrackedAccounts.getAll(eventValues.incomingFollowRequests, eventValues.cachedUsers)
     }
 }

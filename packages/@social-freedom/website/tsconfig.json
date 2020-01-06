@@ -19,7 +19,7 @@
     "noEmit": true,
     "jsx": "react",
     "noImplicitAny": true,
-    "typeRoots": ["./node_modules/@types", "./node_modules/@social-freedom"],
+    "typeRoots": ["./node_modules/@types", "../../../node_modules/@types", "./node_modules/@social-freedom"],
     "types": ["jest", "node", "react", "types"],
     "baseUrl": ".",
     "paths": {

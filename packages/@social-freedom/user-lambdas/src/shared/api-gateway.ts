@@ -1,16 +1,17 @@
 import {APIGatewayEvent} from "aws-lambda";
-import {getAuthToken, getUserId, isFollowingRequestingUser} from "./api-gateway-event-functions";
-import Util from "./util";
+import Helpers from "./helpers";
+import {AuthTokenHeaderName} from "src/shared/constants";
+import ThisAccount from "src/daos/this-account";
 
 export type APIGatewayEventFunction = (event: APIGatewayEvent, eventBody: any) => any;
-export type APIGatewayEventFunctions = {[key:string]:APIGatewayEventFunction};
+export type APIGatewayEventFunctions = { [key: string]: APIGatewayEventFunction };
 export type DefaultAPIGatewayEventFunctions = {
     eventBody: APIGatewayEventFunction,
     userId: APIGatewayEventFunction,
     authToken: APIGatewayEventFunction
 }
 
-export type DefaultEventValues = {[key in keyof DefaultAPIGatewayEventFunctions]: any}
+export type DefaultEventValues = { [key in keyof DefaultAPIGatewayEventFunctions]: any }
 
 const APIGateway = {
     proxyWrapper: async (proxyFunction: () => Promise<any>) => {
@@ -41,8 +42,8 @@ const APIGateway = {
         type AllEventFunctions = T & DefaultAPIGatewayEventFunctions
         const allEventFunctions: AllEventFunctions = {
             eventBody: () => eventBody,
-            userId: getUserId,
-            authToken: getAuthToken,
+            userId: EventFunctions.getUserId,
+            authToken: EventFunctions.getAuthToken,
             ...eventFunctions
         }
 
@@ -50,12 +51,12 @@ const APIGateway = {
             resolvedValues[key] = allEventFunctions[key](event, eventBody)
         })
 
-        return await Util.resolveInObject(resolvedValues)
+        return await Helpers.resolveInObject(resolvedValues)
     },
 
     internalAPIIdentityCheck: async <T extends APIGatewayEventFunctions, U extends DefaultEventValues & { [key in keyof T]: any }>(event: APIGatewayEvent, eventFunctions: T = {} as T): Promise<U> => {
-        if (process.env.USER_ID !== getUserId(event)) {
-            throw new Error(`Unauthorized userId: ${getUserId(event)}`)
+        if (process.env.USER_ID !== EventFunctions.getUserId(event)) {
+            throw new Error(`Unauthorized userId: ${EventFunctions.getUserId(event)}`)
         }
 
         return APIGateway.resolveEventValues(event, eventFunctions)
@@ -64,7 +65,7 @@ const APIGateway = {
     followerAPIIdentityCheck: async <T extends APIGatewayEventFunctions, U extends DefaultEventValues & { [key in keyof T]: any }>(event: APIGatewayEvent, eventFunctions: T = {} as T): Promise<U> => {
         const resolvedEventValues: U = await APIGateway.resolveEventValues(event, {
             ...eventFunctions,
-            isFollowing: isFollowingRequestingUser
+            isFollowing: EventFunctions.isFollowingRequestingUser
         })
         if (!resolvedEventValues.isFollowing) {
             throw new Error(`Unauthorized userId: ${resolvedEventValues.userId}`)
@@ -82,7 +83,26 @@ const APIGateway = {
                 'Access-Control-Allow-Origin': process.env.CORS_ORIGIN
             }
         }
+    }
+}
+
+export const EventFunctions = {
+    getUserId: (event: APIGatewayEvent) => {
+        return event?.requestContext?.authorizer?.claims?.sub
     },
+
+    getAuthToken: (event: APIGatewayEvent) => {
+        return event?.headers?.[AuthTokenHeaderName]
+    },
+
+    // should only be used within follower-api lambdas
+    isFollowingRequestingUser: (event: APIGatewayEvent) => {
+        return ThisAccount.isFollowing(EventFunctions.getUserId(event))
+    },
+
+    cachedUsers: (event: APIGatewayEvent) => {
+        return event?.queryStringParameters?.['cachedUsers']?.split(",") ?? []
+    }
 }
 
 export default APIGateway

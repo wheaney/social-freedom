@@ -20,7 +20,9 @@ describe("the AccountRegistration handler", () => {
                     "userId": {S: "userId"},
                     "accountId": {S: "accountId"},
                     "region": {S: "region"},
-                    "apiOrigin": {S: "apiOrigin"}
+                    "apiOrigin": {S: "apiOrigin"},
+                    "postsTopicArn": {S: "postsTopicArn"},
+                    "profileTopicArn": {S: "profileTopicArn"}
                 }
             })
 
@@ -30,7 +32,9 @@ describe("the AccountRegistration handler", () => {
         await registerAccount("userId", {
             accountId: "accountId",
             region: "region",
-            apiOrigin: "apiOrigin"
+            apiOrigin: "apiOrigin",
+            postsTopicArn: "postsTopicArn",
+            profileTopicArn: "profileTopicArn"
         })
 
         AWSMock.restore('DynamoDB');

@@ -1,21 +1,23 @@
 import {SNSEvent} from "aws-lambda";
 import {FeedEntry} from "@social-freedom/types";
-import Util from "./shared/util";
+import Feed from "src/daos/feed";
+import ThisAccount from "src/daos/this-account";
+import TrackedAccounts from "src/daos/tracked-accounts";
 
 export const handler = async (event:SNSEvent) => {
     await Promise.all(event.Records.map(async (record) => {
         const feedEntry: FeedEntry = JSON.parse(record.Sns.Message)
         if (await isValidAndRelevant(feedEntry, record.Sns.TopicArn)) {
-            await Util.putFeedEntry(feedEntry)
+            await Feed.putEntry(feedEntry)
         }
     }))
 };
 
 export const isValidAndRelevant = async (feedEntry: FeedEntry, eventTopicArn: string) => {
     // we only care about a post if we follow the account that triggered it
-    if (await Util.isFollowing(feedEntry.body.userId)) {
+    if (await ThisAccount.isFollowing(feedEntry.body.userId)) {
         // check that this came from an expected posts topic ARN
-        const accountDetails = await Util.getTrackedAccountDetails(feedEntry.userId)
+        const accountDetails = await TrackedAccounts.get(feedEntry.userId)
         return accountDetails.postsTopicArn === eventTopicArn
     }
 

@@ -1,18 +1,18 @@
-import Util from "./shared/util";
-import APIGateway from "./shared/api-gateway";
+import APIGateway, {EventFunctions} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
 import {GetPostsRequest, GetPostsResponse, PostType} from "@social-freedom/types";
+import TrackedAccounts from "src/daos/tracked-accounts";
+import Dynamo from "src/services/dynamo";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {
         await APIGateway.followerAPIIdentityCheck(event)
 
-        const params = event.queryStringParameters
-        return await postsGet(params ? {
-            cachedUsers: params['cachedUsers'] && params['cachedUsers'].split(",") || [],
-            lastPostKey: params['lastPostKey']
-        } : {})
+        return await postsGet({
+            cachedUsers: EventFunctions.cachedUsers(event),
+            lastPostKey: event.queryStringParameters?.['lastPostKey']
+        })
     })
 }
 
@@ -26,7 +26,7 @@ export const postsGet = async (request: GetPostsRequest): Promise<GetPostsRespon
             id: {S: lastPostId}
         }
     }
-    const queryResult = await Util.queryTimestampIndex(process.env.POSTS_TABLE, 'PostsByTimestamp',
+    const queryResult = await Dynamo.queryTimestampIndex(process.env.POSTS_TABLE, 'PostsByTimestamp',
         PostsTablePartitionKey, startKey)
 
     const response:GetPostsResponse = {
@@ -42,12 +42,7 @@ export const postsGet = async (request: GetPostsRequest): Promise<GetPostsRespon
         lastPostKey: queryResult.LastEvaluatedKey && queryResult.LastEvaluatedKey['timeSortKey'].S
     }
 
-    // the request tells us which account details are already known, ignore those and retrieve any that remain
-    const userIds = response.posts.map(post => post.userId).filter(userId => !request.cachedUsers || !request.cachedUsers.includes(userId))
-    if (userIds.length > 0) {
-        const uniqueIds = [...new Set(userIds)]
-        response.users = await Util.getTrackedAccounts(uniqueIds)
-    }
+    response.users = await TrackedAccounts.getAll(response.posts.map(post => post.userId), request.cachedUsers)
 
     return response
 }

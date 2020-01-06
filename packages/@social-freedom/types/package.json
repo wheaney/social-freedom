@@ -27,11 +27,5 @@
   "publishConfig": {
     "access": "public",
     "directory": "dist"
-  },
-  "devDependencies": {
-    "@types/jest": "^24.0.25",
-    "jest": "^24.9.0",
-    "ts-jest": "^24.2.0",
-    "typescript": "^3.7.4"
   }
 }

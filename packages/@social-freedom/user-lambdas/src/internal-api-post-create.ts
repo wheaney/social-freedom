@@ -3,7 +3,8 @@ import APIGateway from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
 import {FeedEntry, PostDetails} from "@social-freedom/types";
-import Util from "./shared/util";
+import Dynamo from "src/services/dynamo";
+import SNS from "src/services/sns";
 
 export const handler = async (event:APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {
@@ -20,7 +21,7 @@ export const putPost = async (post:PostDetails) => {
     // Add post to DynamoDB "posts" table
     const timestamp:number = Date.now()
     post.id = post.id ?? uuid.v1()
-    await Util.dynamoDbClient.putItem({
+    await Dynamo.client.putItem({
         TableName: process.env.POSTS_TABLE,
         Item: {
             "key": {S: PostsTablePartitionKey},
@@ -43,7 +44,7 @@ export const putPost = async (post:PostDetails) => {
         userId: process.env.USER_ID,
         body: post
     }
-    await Util.snsClient.publish({
+    await SNS.client.publish({
         TopicArn: process.env.POSTS_TOPIC,
         Message: JSON.stringify(feedEntry)
     }).promise()

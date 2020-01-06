@@ -1,13 +1,18 @@
-import Util from "../src/shared/util";
 import {internalFollowRequestCreate} from "../src/internal-api-follow-request-create";
-import {
-    FollowingAccountDetails,
-    setupEnvironmentVariables
-} from "./test-utils";
+import {FollowingAccountDetails, setupEnvironmentVariables} from "./test-utils";
 import {AccountDetailsOutgoingFollowRequestsKey} from "../src/shared/constants";
+import Dynamo from "../src/services/dynamo";
+import UserAPI from "../src/services/user-api";
+import TrackedAccounts from "../src/daos/tracked-accounts";
 
-jest.mock("../src/shared/util")
-const mockedUtil = Util as jest.Mocked<typeof Util>
+jest.mock("../src/services/dynamo")
+const mockedDynamo = Dynamo as jest.Mocked<typeof Dynamo>
+
+jest.mock("../src/services/user-api")
+const mockedUserAPI = UserAPI as jest.Mocked<typeof UserAPI>
+
+jest.mock("../src/daos/tracked-accounts")
+const mockedTrackedAccounts = TrackedAccounts as jest.Mocked<typeof TrackedAccounts>
 
 beforeAll(done => {
     setupEnvironmentVariables()
@@ -23,9 +28,9 @@ describe("internalFollowRequestCreate", () => {
     it("should queue up the outgoing request", async () => {
         await internalFollowRequestCreate('authToken', FollowingAccountDetails)
 
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'followingUserId')
-        expect(mockedUtil.putTrackedAccount).toHaveBeenCalledWith(FollowingAccountDetails)
-        expect(mockedUtil.queueAPIRequest).toHaveBeenCalledWith('myApiDomain.com', 'internal/async/follow-requests',
+        expect(mockedDynamo.addToSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'followingUserId')
+        expect(mockedTrackedAccounts.put).toHaveBeenCalledWith(FollowingAccountDetails)
+        expect(mockedUserAPI.queueRequest).toHaveBeenCalledWith('myApiDomain.com', 'internal/async/follow-requests',
             'authToken', 'POST', FollowingAccountDetails)
     })
 })

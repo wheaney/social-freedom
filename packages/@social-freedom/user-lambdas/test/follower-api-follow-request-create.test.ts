@@ -1,4 +1,3 @@
-import Util from "../src/shared/util";
 import {setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
 import {conditionalAutoRespond} from "../src/follower-api-follow-request-create";
 import {
@@ -6,9 +5,18 @@ import {
     AccountDetailsFollowingKey,
     AccountDetailsIncomingFollowRequestsKey
 } from "../src/shared/constants";
+import Dynamo from "../src/services/dynamo";
+import TrackedAccounts from "../src/daos/tracked-accounts";
+import SNS from "../src/services/sns";
 
-jest.mock("../src/shared/util")
-const mockedUtil = Util as jest.Mocked<typeof Util>
+jest.mock("../src/services/dynamo")
+const mockedDynamo = Dynamo as jest.Mocked<typeof Dynamo>
+
+jest.mock("../src/services/sns")
+const mockedSNS = SNS as jest.Mocked<typeof SNS>
+
+jest.mock("../src/daos/tracked-accounts")
+const mockedTrackedAccounts = TrackedAccounts as jest.Mocked<typeof TrackedAccounts>
 
 const testEventValues = {
     userId: "otherUserId",
@@ -41,10 +49,10 @@ describe("conditionalAutoRespond", () => {
             }
         })
 
-        expect(mockedUtil.addToDynamoSet).not.toHaveBeenCalled()
-        expect(mockedUtil.putTrackedAccount).not.toHaveBeenCalled()
-        expect(mockedUtil.subscribeToProfileEvents).not.toHaveBeenCalled()
-        expect(mockedUtil.subscribeToPostEvents).not.toHaveBeenCalled()
+        expect(mockedDynamo.addToSet).not.toHaveBeenCalled()
+        expect(mockedTrackedAccounts.put).not.toHaveBeenCalled()
+        expect(mockedSNS.subscribeToProfileEvents).not.toHaveBeenCalled()
+        expect(mockedSNS.subscribeToPostEvents).not.toHaveBeenCalled()
     });
 
     it("should auto-accept if the account is public or already following", async () => {
@@ -64,18 +72,18 @@ describe("conditionalAutoRespond", () => {
             isFollowing: true
         })).toStrictEqual(acceptResponse)
 
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowingKey, 'otherUserId')
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'otherUserId')
-        expect(mockedUtil.putTrackedAccount).toHaveBeenCalledWith({ foo: 'bar' })
-        expect(mockedUtil.subscribeToProfileEvents).toHaveBeenCalledWith({ foo: 'bar' })
-        expect(mockedUtil.subscribeToPostEvents).toHaveBeenCalledWith({ foo: 'bar' })
+        expect(mockedDynamo.addToSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowingKey, 'otherUserId')
+        expect(mockedDynamo.addToSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsFollowersKey, 'otherUserId')
+        expect(mockedTrackedAccounts.put).toHaveBeenCalledWith({ foo: 'bar' })
+        expect(mockedSNS.subscribeToProfileEvents).toHaveBeenCalledWith({ foo: 'bar' })
+        expect(mockedSNS.subscribeToPostEvents).toHaveBeenCalledWith({ foo: 'bar' })
     });
 
     it('should store the incoming request if not auto-responding', async () => {
         await conditionalAutoRespond(testEventValues)
 
-        expect(mockedUtil.addToDynamoSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'otherUserId')
-        expect(mockedUtil.putTrackedAccount).toHaveBeenCalledWith({ foo: 'bar' })
-        expect(mockedUtil.subscribeToProfileEvents).toHaveBeenCalledWith({ foo: 'bar' })
+        expect(mockedDynamo.addToSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsIncomingFollowRequestsKey, 'otherUserId')
+        expect(mockedTrackedAccounts.put).toHaveBeenCalledWith({ foo: 'bar' })
+        expect(mockedSNS.subscribeToProfileEvents).toHaveBeenCalledWith({ foo: 'bar' })
     })
 });

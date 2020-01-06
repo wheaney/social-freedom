@@ -4,8 +4,9 @@ import {putPost} from "../src/internal-api-post-create"
 import {PublishResponse} from "aws-sdk/clients/sns";
 import {setupEnvironmentVariables} from "./test-utils";
 import {PostType} from "@social-freedom/types";
-import Util from "../src/shared/util";
 import {PromiseResult} from "aws-sdk/lib/request";
+import Dynamo from "../src/services/dynamo";
+import SNS from "../src/services/sns";
 
 const testPost = {
     id: "id",
@@ -33,9 +34,9 @@ let putItemMock: jest.SpyInstance<Request<PutItemOutput, AWSError>>;
 let publishMock: jest.SpyInstance<Request<PublishResponse, AWSError>>;
 beforeEach(async (done) => {
     jest.clearAllMocks()
-    putItemMock = jest.spyOn(Util.dynamoDbClient, 'putItem')
+    putItemMock = jest.spyOn(Dynamo.client, 'putItem')
 
-    publishMock = jest.spyOn(Util.snsClient, 'publish')
+    publishMock = jest.spyOn(SNS.client, 'publish')
     done()
 });
 

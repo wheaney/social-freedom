@@ -1,4 +1,3 @@
-import Util from "./shared/util";
 import {APIGatewayEvent} from "aws-lambda";
 import {FollowRequestCreateResponse, isFollowRequest, ReducedAccountDetails} from "@social-freedom/types";
 import {
@@ -7,8 +6,11 @@ import {
     AccountDetailsIncomingFollowRequestsKey,
     AccountDetailsRejectedFollowRequestsKey
 } from "./shared/constants";
-import {getUserId, isFollowingRequestingUser} from "./shared/api-gateway-event-functions";
-import APIGateway, {DefaultEventValues} from "./shared/api-gateway";
+import APIGateway, {DefaultEventValues, EventFunctions} from "./shared/api-gateway";
+import ThisAccount from "src/daos/this-account";
+import Dynamo from "src/services/dynamo";
+import TrackedAccounts from "src/daos/tracked-accounts";
+import SNS from "src/services/sns";
 
 type EventValues = DefaultEventValues & {
     isFollowing: boolean,
@@ -20,9 +22,9 @@ type EventValues = DefaultEventValues & {
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
     return await APIGateway.proxyWrapper(async () => {
         const eventValues: EventValues = await APIGateway.resolveEventValues(event, {
-            isFollowing: isFollowingRequestingUser,
-            isAccountPublic: Util.isAccountPublic,
-            thisAccountDetails: Util.getThisAccountDetails,
+            isFollowing: EventFunctions.isFollowingRequestingUser,
+            isAccountPublic: ThisAccount.isPublic,
+            thisAccountDetails: ThisAccount.getDetails,
             hasPreviouslyRejectedRequest: hasPreviouslyRejectedRequest
         })
 
@@ -39,7 +41,7 @@ export const handler = async (event: APIGatewayEvent): Promise<any> => {
 };
 
 export const hasPreviouslyRejectedRequest = async (event: APIGatewayEvent) => {
-    return Util.dynamoSetContains(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsRejectedFollowRequestsKey, getUserId(event))
+    return Dynamo.isInSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsRejectedFollowRequestsKey, EventFunctions.getUserId(event))
 }
 
 export const conditionalAutoRespond = async (eventValues: EventValues): Promise<FollowRequestCreateResponse> => {
@@ -51,11 +53,11 @@ export const conditionalAutoRespond = async (eventValues: EventValues): Promise<
         }
     } else if (eventValues.isAccountPublic || eventValues.isFollowing) {
         await Promise.all([
-            Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, eventValues.userId),
-            Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, eventValues.userId),
-            Util.putTrackedAccount(eventValues.eventBody),
-            Util.subscribeToProfileEvents(eventValues.eventBody),
-            Util.subscribeToPostEvents(eventValues.eventBody)
+            Dynamo.addToSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowingKey, eventValues.userId),
+            Dynamo.addToSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsFollowersKey, eventValues.userId),
+            TrackedAccounts.put(eventValues.eventBody),
+            SNS.subscribeToProfileEvents(eventValues.eventBody),
+            SNS.subscribeToPostEvents(eventValues.eventBody)
         ])
 
         return {
@@ -68,9 +70,9 @@ export const conditionalAutoRespond = async (eventValues: EventValues): Promise<
 
     // no auto-response
     await Promise.all([
-        Util.addToDynamoSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, eventValues.userId),
-        Util.putTrackedAccount(eventValues.eventBody),
-        Util.subscribeToProfileEvents(eventValues.eventBody)
+        Dynamo.addToSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsIncomingFollowRequestsKey, eventValues.userId),
+        TrackedAccounts.put(eventValues.eventBody),
+        SNS.subscribeToProfileEvents(eventValues.eventBody)
     ])
     return {}
 }

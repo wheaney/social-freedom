@@ -27,13 +27,7 @@
     "semantic-ui-react": "^0.88.2"
   },
   "devDependencies": {
-    "@social-freedom/types": "^0.0.8",
-    "@types/jest": "24.0.25",
-    "@types/node": "13.1.2",
-    "@types/react": "16.9.17",
-    "@types/react-dom": "16.9.4",
-    "react-scripts": "3.3.0",
-    "typescript": "3.7.4"
+    "@social-freedom/types": "^0.0.8"
   },
   "browserslist": {
     "production": [
