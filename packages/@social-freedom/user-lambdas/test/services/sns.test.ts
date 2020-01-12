@@ -1,13 +1,9 @@
-import {FollowingAccountDetails, setupEnvironmentVariables} from "../test-utils";
-import {AWSError, Request} from "aws-sdk";
+import {createAWSMock, FollowingAccountDetails, setAWSMock, setupEnvironmentVariables} from "../test-utils";
 import {SubscribeResponse} from "aws-sdk/clients/sns";
 import SNS from "../../src/services/sns";
-import {PromiseResult} from "aws-sdk/lib/request";
 
-let subscribeMock: jest.SpyInstance<Request<SubscribeResponse, AWSError>> = jest.spyOn(SNS.client, 'subscribe')
-subscribeMock.mockReturnValue({
-    promise: () => Promise.resolve() as unknown as Promise<PromiseResult<SubscribeResponse, AWSError>>
-} as unknown as Request<SubscribeResponse, AWSError>)
+let subscribeMock = createAWSMock<SubscribeResponse>(SNS.client, 'subscribe')
+setAWSMock(subscribeMock, Promise.resolve())
 
 beforeAll(async (done) => {
     setupEnvironmentVariables()

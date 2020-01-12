@@ -1,4 +1,6 @@
 import {AccountDetails, ReducedAccountDetails} from "@social-freedom/types";
+import {AWSError, Request} from "aws-sdk";
+import {PromiseResult} from "aws-sdk/lib/request";
 
 export const FollowingAccountDetailsFull:AccountDetails = {
     userId: "followingUserId",
@@ -63,4 +65,14 @@ export function setupEnvironmentVariables() {
         PROFILE_TOPIC: "profileTopic",
         CORS_ORIGIN: "allowedOrigin"
     }
+}
+
+export function createAWSMock<T>(client: any, fn: string): jest.SpyInstance<Request<T, AWSError>> {
+    return jest.spyOn(client, fn)
+}
+
+export function setAWSMock<T>(mock: jest.SpyInstance<Request<T, AWSError>>, promise: Promise<any>) {
+    mock.mockReturnValue({
+        promise: () => promise as unknown as Promise<PromiseResult<T, AWSError>>
+    } as unknown as Request<T, AWSError>)
 }

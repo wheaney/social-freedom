@@ -26,8 +26,7 @@ const ThisAccount = {
             }
         }).promise()
 
-        return !!isAccountPublicItem.Item && !!isAccountPublicItem.Item['value'] &&
-            !!isAccountPublicItem.Item['value'].BOOL
+        return isAccountPublicItem?.Item?.['value']?.BOOL ?? false
     },
 
     getProfile: async (): Promise<Profile> => {

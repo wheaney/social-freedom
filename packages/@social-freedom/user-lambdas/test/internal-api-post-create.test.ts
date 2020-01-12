@@ -2,9 +2,8 @@ import {AWSError, Request} from "aws-sdk";
 import {PutItemOutput} from "aws-sdk/clients/dynamodb";
 import {putPost} from "../src/internal-api-post-create"
 import {PublishResponse} from "aws-sdk/clients/sns";
-import {setupEnvironmentVariables} from "./test-utils";
+import {createAWSMock, setAWSMock, setupEnvironmentVariables} from "./test-utils";
 import {PostType} from "@social-freedom/types";
-import {PromiseResult} from "aws-sdk/lib/request";
 import Dynamo from "../src/services/dynamo";
 import SNS from "../src/services/sns";
 
@@ -34,28 +33,15 @@ let putItemMock: jest.SpyInstance<Request<PutItemOutput, AWSError>>;
 let publishMock: jest.SpyInstance<Request<PublishResponse, AWSError>>;
 beforeEach(async (done) => {
     jest.clearAllMocks()
-    putItemMock = jest.spyOn(Dynamo.client, 'putItem')
-
-    publishMock = jest.spyOn(SNS.client, 'publish')
+    putItemMock = createAWSMock<PutItemOutput>(Dynamo.client, 'putItem')
+    publishMock = createAWSMock<PublishResponse>(SNS.client, 'publish')
     done()
 });
 
-function mockPutItemPromise(promise: Promise<any>) {
-    putItemMock.mockReturnValue({
-        promise: () => promise as unknown as Promise<PromiseResult<PutItemOutput, AWSError>>
-    } as unknown as Request<PutItemOutput, AWSError>)
-}
-
-function mockPublishPromise(promise: Promise<any>) {
-    publishMock.mockReturnValue({
-        promise: () => promise as unknown as Promise<PromiseResult<PublishResponse, AWSError>>
-    } as unknown as Request<PublishResponse, AWSError>)
-}
-
 describe("putPost", () => {
     it("should succeed when creating a new post", async () => {
-        mockPutItemPromise(Promise.resolve())
-        mockPublishPromise(Promise.resolve())
+        setAWSMock(putItemMock, Promise.resolve())
+        setAWSMock(publishMock, Promise.resolve())
 
         await putPost({
             ...testPost,
@@ -92,8 +78,8 @@ describe("putPost", () => {
     });
 
     it("should succeed when updating a post", async () => {
-        mockPutItemPromise(Promise.resolve())
-        mockPublishPromise(Promise.resolve())
+        setAWSMock(putItemMock, Promise.resolve())
+        setAWSMock(publishMock, Promise.resolve())
 
         await putPost(testPost)
 
@@ -124,7 +110,7 @@ describe("putPost", () => {
     });
 
     it("should fail when putItem fails", async () => {
-        mockPutItemPromise(Promise.reject('DynamoDB failed!'))
+        setAWSMock(putItemMock, Promise.reject('DynamoDB failed!'))
 
         try {
             await putPost(testPost)
@@ -134,8 +120,8 @@ describe("putPost", () => {
     });
 
     it("should fail when publish fails", async () => {
-        mockPutItemPromise(Promise.resolve())
-        mockPublishPromise(Promise.reject('SNS failed!'))
+        setAWSMock(putItemMock, Promise.resolve())
+        setAWSMock(publishMock, Promise.reject('SNS failed!'))
 
         try {
             await putPost(testPost)
