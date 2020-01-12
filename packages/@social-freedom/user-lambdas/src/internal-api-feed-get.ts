@@ -1,8 +1,8 @@
 import APIGateway, {EventFunctions} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {FeedEntryOperation, FeedEntryType, GetFeedRequest, GetFeedResponse} from "@social-freedom/types";
-import TrackedAccounts from "src/daos/tracked-accounts";
-import Feed from "src/daos/feed";
+import TrackedAccounts from "./daos/tracked-accounts";
+import Feed from "./daos/feed";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {

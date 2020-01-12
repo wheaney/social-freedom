@@ -20,9 +20,9 @@
     "outDir": "./dist",
     "typeRoots": ["./node_modules/@types", "../../../node_modules/@types", "./node_modules/@social-freedom"],
     "types": ["aws-lambda", "jest", "node", "types"],
-    "baseUrl": ".",
+    "baseUrl": "./src",
     "paths": {
-      "@social-freedom/types": ["../types/src"]
+      "@social-freedom/types": ["../types/dist", "../types/src"]
     }
   },
   "include": [

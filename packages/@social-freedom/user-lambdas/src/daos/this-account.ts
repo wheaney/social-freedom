@@ -2,8 +2,8 @@ import {Profile, ReducedAccountDetails} from "@social-freedom/types";
 import {PromiseResult} from "aws-sdk/lib/request";
 import {GetItemOutput} from "aws-sdk/clients/dynamodb";
 import {AWSError} from "aws-sdk";
-import {AccountDetailsFollowersKey, AccountDetailsFollowingKey, AccountDetailsIsPublicKey} from "src/shared/constants";
-import Dynamo from "src/services/dynamo";
+import {AccountDetailsFollowersKey, AccountDetailsFollowingKey, AccountDetailsIsPublicKey} from "../shared/constants";
+import Dynamo from "../services/dynamo";
 
 const ThisAccount = {
     getDetails: async (): Promise<ReducedAccountDetails> => {

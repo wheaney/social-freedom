@@ -153,13 +153,17 @@ we need to do here.
 # Testing and deploying CDK changes in dev
 1. Make sure you've configured your AWS CLI (you should have files present in ~/.aws) to use your own
 personal AWS account
-2. Use `npm run` with the `userstackcheck` or `federalstackcheck` targets. This will:
-  * Compile your Lambda definitions into JS using `tsc`
+2. Run `lerna bootstrap`, this will:
+  * Install all dependencies not in the @social-freedom scope
+  * Symlink all the local @social-freedom dependencies together
+  * Run `tsc` and build out the build/dist directories within all packages, these build directories are the targets of the symlinks from the previous step
+    * This is automatically performed by lerna in the appropriate dependency order, so a package depending on another local package will first wait for that one to complete its build process above before attempting its own
+3. Use `npm run` with the `userstackcheck` or `federalstackcheck` targets. This will:
   * Use the CDK command-line tool to load the desired stack
   * Run the `list` command on that stack. The output will simply be the name of the stack.
-3. Use `npm run` with the `userstackdeploy` or `federalstackdeploy` targets. This will do the same as 
+4. Use `npm run` with the `userstackdeploy` or `federalstackdeploy` targets. This will do the same as 
 above, but will use the `deploy` CDK command on the stack, which will deploy to your personal AWS account.
-4. Be sure to revert the CloudFormation deployment when you're done for the day so you don't accumulate
+5. Be sure to revert the CloudFormation deployment when you're done for the day so you don't accumulate
 charges for any per-hour services (e.g. ElasticSearch).
   * Alternatively, comment out any such infrastructure from your CDK code prior to Step #3 to prevent
   it from being deployed.

@@ -1,4 +1,4 @@
-import {ConditionalCheckFailedCode} from "src/shared/constants";
+import {ConditionalCheckFailedCode} from "../shared/constants";
 import * as AWS from "aws-sdk";
 import {Key} from "aws-sdk/clients/dynamodb";
 

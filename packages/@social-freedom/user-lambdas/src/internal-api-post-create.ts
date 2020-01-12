@@ -3,8 +3,8 @@ import APIGateway from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
 import {FeedEntry, PostDetails} from "@social-freedom/types";
-import Dynamo from "src/services/dynamo";
-import SNS from "src/services/sns";
+import Dynamo from "./services/dynamo";
+import SNS from "./services/sns";
 
 export const handler = async (event:APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {

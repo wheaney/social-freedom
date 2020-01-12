@@ -7,10 +7,10 @@ import {
     AccountDetailsOutgoingFollowRequestsKey,
     AccountDetailsRejectedFollowRequestsKey
 } from "./shared/constants";
-import Dynamo from "src/services/dynamo";
-import UserAPI from "src/services/user-api";
-import ThisAccount from "src/daos/this-account";
-import TrackedAccounts from "src/daos/tracked-accounts";
+import Dynamo from "./services/dynamo";
+import UserAPI from "./services/user-api";
+import ThisAccount from "./daos/this-account";
+import TrackedAccounts from "./daos/tracked-accounts";
 
 const EventFunctions = {
     requestExists: requestExists,

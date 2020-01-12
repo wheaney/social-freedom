@@ -1,11 +1,11 @@
-import Helpers from "./helpers";
-import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} from "./constants";
+import Helpers from "../shared/helpers";
+import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} from "../shared/constants";
 import {FollowRequest, FollowRequestResponse, isFollowRequestCreateResponse} from "@social-freedom/types";
-import ThisAccount from "src/daos/this-account";
-import TrackedAccounts from "src/daos/tracked-accounts";
-import Dynamo from "src/services/dynamo";
-import SNS from "src/services/sns";
-import UserAPI from "src/services/user-api";
+import ThisAccount from "../daos/this-account";
+import TrackedAccounts from "../daos/tracked-accounts";
+import Dynamo from "../services/dynamo";
+import SNS from "../services/sns";
+import UserAPI from "../services/user-api";
 
 export const handleFollowRequestResponse = async (response: FollowRequestResponse) => {
     // TODO - verify response account details

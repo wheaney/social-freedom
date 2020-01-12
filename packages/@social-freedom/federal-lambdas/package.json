@@ -3,10 +3,11 @@
   "version": "0.0.8",
   "description": "Lambda functions for the social-freedom federal stack",
   "scripts": {
+    "postinstall": "npm run build",
     "prebuild": "rm -rf dist",
     "build": "tsc",
-    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cd ./dist && npm install --production",
-    "prepack": "npm run build",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cp -RL ./node_modules ./dist",
+    "prepack": "npm install --production",
     "test": "jest"
   },
   "repository": {
@@ -22,8 +23,11 @@
     "url": "https://github.com/wheaney/social-freedom/issues"
   },
   "homepage": "https://github.com/wheaney/social-freedom#readme",
-  "devDependencies": {
+  "dependencies": {
     "@social-freedom/types": "^0.0.8"
+  },
+  "devDependencies": {
+    "jest": "file:../../../node_modules/jest"
   },
   "publishConfig": {
     "access": "public",

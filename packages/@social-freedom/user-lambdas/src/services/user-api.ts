@@ -1,6 +1,6 @@
 import * as AWS from "aws-sdk";
 import fetch from "node-fetch";
-import {AuthTokenHeaderName} from "src/shared/constants";
+import {AuthTokenHeaderName} from "../shared/constants";
 
 const UserAPI = {
     queueRequest: async (origin: string, path: string, authToken: string,

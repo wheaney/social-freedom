@@ -2,9 +2,9 @@ import APIGateway from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {FollowRequest} from "@social-freedom/types";
 import {AccountDetailsOutgoingFollowRequestsKey} from "./shared/constants";
-import Dynamo from "src/services/dynamo";
-import TrackedAccounts from "src/daos/tracked-accounts";
-import UserAPI from "src/services/user-api";
+import Dynamo from "./services/dynamo";
+import TrackedAccounts from "./daos/tracked-accounts";
+import UserAPI from "./services/user-api";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {

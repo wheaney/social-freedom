@@ -7,10 +7,10 @@ import {
     AccountDetailsRejectedFollowRequestsKey
 } from "./shared/constants";
 import APIGateway, {DefaultEventValues, EventFunctions} from "./shared/api-gateway";
-import ThisAccount from "src/daos/this-account";
-import Dynamo from "src/services/dynamo";
-import TrackedAccounts from "src/daos/tracked-accounts";
-import SNS from "src/services/sns";
+import ThisAccount from "./daos/this-account";
+import Dynamo from "./services/dynamo";
+import TrackedAccounts from "./daos/tracked-accounts";
+import SNS from "./services/sns";
 
 type EventValues = DefaultEventValues & {
     isFollowing: boolean,

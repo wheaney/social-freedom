@@ -3,7 +3,7 @@ import {APIGatewayEvent} from "aws-lambda";
 import {isFollowRequestResponse} from "@social-freedom/types"
 import {AccountDetailsOutgoingFollowRequestsKey} from "./shared/constants";
 import {handleFollowRequestResponse} from "./shared/follow-requests";
-import Dynamo from "src/services/dynamo";
+import Dynamo from "./services/dynamo";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {

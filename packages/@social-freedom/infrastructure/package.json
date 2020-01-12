@@ -7,12 +7,13 @@
     "test": "jest",
     "prebuild": "rm -rf ./dist",
     "build": "tsc",
-    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist",
-    "prepack": "npm run build",
-    "federalstackcheck": "npm run build && cdk -v -a \"ts-node src/federal/app.ts\" list",
-    "federalstackdeploy": "npm run build && cdk -v -a \"ts-node src/federal/app.ts\" deploy",
-    "userstackcheck": "npm run build && cdk -v -a \"ts-node src/user/app.ts\" list",
-    "userstackdeploy": "npm run build && cdk -v -a \"ts-node src/user/app.ts\" deploy"
+    "postinstall": "npm run build",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cp -RL ./node_modules ./dist",
+    "prepack": "npm install --production",
+    "federalstackcheck": "cdk -v -a \"ts-node src/federal/app.ts\" list",
+    "federalstackdeploy": "cdk -v -a \"ts-node src/federal/app.ts\" deploy",
+    "userstackcheck": "cdk -v -a \"ts-node src/user/app.ts\" list",
+    "userstackdeploy": "cdk -v -a \"ts-node src/user/app.ts\" deploy"
   },
   "repository": {
     "type": "git",

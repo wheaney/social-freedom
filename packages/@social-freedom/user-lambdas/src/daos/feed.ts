@@ -1,6 +1,6 @@
 import {FeedEntry} from "@social-freedom/types";
-import Dynamo from "src/services/dynamo";
-import {FeedTablePartitionKey} from "src/shared/constants";
+import Dynamo from "../services/dynamo";
+import {FeedTablePartitionKey} from "../shared/constants";
 import {DynamoDB} from "aws-sdk";
 
 const Feed = {

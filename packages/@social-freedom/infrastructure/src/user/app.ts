@@ -8,7 +8,7 @@ const app = new cdk.App();
 // https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-codebuild-project-environmentvariable.html
 
 new UserStack(app, process.env.NODE_ENV !== 'production',
-    process.env.FEDERAL_STACK_WEBSITE_ORIGIN, process.env.USER_STACK_USER_ID,
+    process.env.FEDERAL_STACK_WEBSITE_ORIGIN, "f6655ca8-d8b0-44ba-99dc-ea3fa6061881",
     process.env.FEDERAL_STACK_USER_POOL_ARN);
 
 app.synth();

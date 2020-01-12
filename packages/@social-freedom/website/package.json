@@ -3,6 +3,7 @@
   "version": "0.0.8",
   "description": "Static front-end website for the social-freedom project",
   "scripts": {
+    "postinstall": "npm run build",
     "start": "react-scripts start",
     "build": "react-scripts build",
     "prepack": "npm run build",
@@ -27,6 +28,7 @@
     "semantic-ui-react": "^0.88.2"
   },
   "devDependencies": {
+    "react-scripts": "file:../../../node_modules/react-scripts",
     "@social-freedom/types": "^0.0.8"
   },
   "browserslist": {

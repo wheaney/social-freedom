@@ -1,6 +1,6 @@
 import {SQSEvent} from "aws-lambda";
 import {isAPIRequestMessage} from "@social-freedom/types";
-import UserAPI from "src/services/user-api";
+import UserAPI from "./services/user-api";
 
 
 export const handler = async (event:SQSEvent) => {

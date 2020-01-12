@@ -1,6 +1,6 @@
 import {AttributeMap} from "aws-sdk/clients/dynamodb";
 import {ReducedAccountDetails, UserDetails} from "@social-freedom/types";
-import Dynamo from "src/services/dynamo";
+import Dynamo from "../services/dynamo";
 
 const TrackedAccounts = {
     put: async (trackedAccount: ReducedAccountDetails) => {

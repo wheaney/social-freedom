@@ -3,10 +3,11 @@
   "version": "0.0.8",
   "description": "Shared TypeScript types for the social-freedom project",
   "scripts": {
+    "postinstall": "npm run build",
     "prebuild": "rm -rf ./dist",
     "build": "tsc",
-    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cd ./dist && npm install --production",
-    "prepack": "npm run build",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist",
+    "prepack": "npm install --production",
     "test": "jest"
   },
   "main": "./index.js",

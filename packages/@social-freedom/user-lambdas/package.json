@@ -3,10 +3,11 @@
   "version": "0.0.8",
   "description": "Lambda functions for the social-freedom user stack",
   "scripts": {
+    "postinstall": "npm run build",
     "prebuild": "rm -rf dist",
     "build": "tsc",
-    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cd ./dist && npm install --production",
-    "prepack": "npm run build",
+    "postbuild": "cp ./package.json ./dist && cp LICENSE ./dist && cp -RL ./node_modules ./dist",
+    "prepack": "npm install --production",
     "test": "jest"
   },
   "repository": {
@@ -26,6 +27,9 @@
     "@social-freedom/types": "^0.0.8",
     "node-fetch": "^2.6.0",
     "uuid": "^3.3.3"
+  },
+  "devDependencies": {
+    "jest": "file:../../../node_modules/jest"
   },
   "publishConfig": {
     "access": "public",

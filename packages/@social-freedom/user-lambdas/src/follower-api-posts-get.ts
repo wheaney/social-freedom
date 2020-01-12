@@ -2,8 +2,8 @@ import APIGateway, {EventFunctions} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
 import {GetPostsRequest, GetPostsResponse, PostType} from "@social-freedom/types";
-import TrackedAccounts from "src/daos/tracked-accounts";
-import Dynamo from "src/services/dynamo";
+import TrackedAccounts from "./daos/tracked-accounts";
+import Dynamo from "./services/dynamo";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.proxyWrapper(async () => {

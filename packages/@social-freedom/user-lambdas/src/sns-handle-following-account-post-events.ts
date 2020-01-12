@@ -1,8 +1,8 @@
 import {SNSEvent} from "aws-lambda";
 import {FeedEntry} from "@social-freedom/types";
-import Feed from "src/daos/feed";
-import ThisAccount from "src/daos/this-account";
-import TrackedAccounts from "src/daos/tracked-accounts";
+import Feed from "./daos/feed";
+import ThisAccount from "./daos/this-account";
+import TrackedAccounts from "./daos/tracked-accounts";
 
 export const handler = async (event:SNSEvent) => {
     await Promise.all(event.Records.map(async (record) => {

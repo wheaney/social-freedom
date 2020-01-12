@@ -1,7 +1,7 @@
 import {APIGatewayEvent} from "aws-lambda";
-import Helpers from "./helpers";
-import {AuthTokenHeaderName} from "src/shared/constants";
-import ThisAccount from "src/daos/this-account";
+import Helpers from "../shared/helpers";
+import {AuthTokenHeaderName} from "../shared/constants";
+import ThisAccount from "../daos/this-account";
 
 export type APIGatewayEventFunction = (event: APIGatewayEvent, eventBody: any) => any;
 export type APIGatewayEventFunctions = { [key: string]: APIGatewayEventFunction };

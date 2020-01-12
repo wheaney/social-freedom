@@ -7,6 +7,6 @@ module.exports = {
     ],
     moduleNameMapper: {
         '^@social-freedom/types$': '<rootDir>/../types/src',
-        '^src/(.*)$': '<rootDir>/src/$1'
+        '^\./(shared|daos|services)/(.*)$': '<rootDir>/src/$1/$2'
     }
 };

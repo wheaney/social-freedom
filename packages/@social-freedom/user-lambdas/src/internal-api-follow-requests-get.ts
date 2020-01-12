@@ -2,8 +2,8 @@ import APIGateway, {DefaultEventValues, EventFunctions} from "./shared/api-gatew
 import {APIGatewayEvent} from "aws-lambda";
 import {AccountDetailsIncomingFollowRequestsKey} from "./shared/constants";
 import {FollowRequestsResponse} from "@social-freedom/types";
-import Dynamo from "src/services/dynamo";
-import TrackedAccounts from "src/daos/tracked-accounts";
+import Dynamo from "./services/dynamo";
+import TrackedAccounts from "./daos/tracked-accounts";
 
 type EventValues = DefaultEventValues & {
     cachedUsers: string[],
