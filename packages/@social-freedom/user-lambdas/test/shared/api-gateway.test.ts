@@ -1,5 +1,5 @@
 import APIGateway from "../../src/shared/api-gateway";
-import {setupEnvironmentVariables} from "../test-utils";
+import {mockConsole, setupEnvironmentVariables} from "../test-utils";
 import {TestObject} from "../../../types/test/types/shared";
 import {APIGatewayEvent} from "aws-lambda";
 import {AuthTokenHeaderName} from "../../src/shared/constants";
@@ -35,6 +35,7 @@ beforeAll(done => {
 
 beforeEach(async (done) => {
     jest.restoreAllMocks()
+    mockConsole('log')
     done()
 })
 
@@ -48,10 +49,7 @@ describe('proxyWrapper', () => {
 
     it('should return 500 if any errors are thrown', async () => {
         const lambdaResponseMock = jest.spyOn(APIGateway, 'lambdaResponse')
-        const consoleErrorMock = jest.spyOn(global.console, 'error')
-
-        // mock implementation makes it so that this test doesn't produce error output
-        consoleErrorMock.mockImplementation(() => {})
+        const consoleErrorMock = mockConsole('error')
 
         const error = new Error('haha')
         await APIGateway.proxyWrapper(async () => { throw error })

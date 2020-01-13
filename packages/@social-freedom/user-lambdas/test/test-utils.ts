@@ -78,3 +78,12 @@ export function setAWSMock<T>(mock: jest.SpyInstance<Request<T, AWSError>>, prom
         promise: () => promise as unknown as Promise<PromiseResult<T, AWSError>>
     } as unknown as Request<T, AWSError>)
 }
+
+export function mockConsole(level: 'debug' | 'error' | 'info' | 'log' | 'warn') {
+    const consoleMock = jest.spyOn(global.console, level)
+
+    // mock implementation makes it so that this test doesn't produce output
+    consoleMock.mockImplementation(() => {})
+
+    return consoleMock
+}
