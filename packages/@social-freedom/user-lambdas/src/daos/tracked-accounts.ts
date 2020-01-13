@@ -1,5 +1,5 @@
 import {AttributeMap} from "aws-sdk/clients/dynamodb";
-import {ReducedAccountDetails, UserDetails} from "@social-freedom/types";
+import {isReducedAccountDetails, ReducedAccountDetails, UserDetails} from "@social-freedom/types";
 import Dynamo from "../services/dynamo";
 
 const TrackedAccounts = {
@@ -17,23 +17,32 @@ const TrackedAccounts = {
         }).promise()
     },
 
+    attributeMapToTrackedAccount: (map: AttributeMap): ReducedAccountDetails => {
+        const trackedAccount = {
+            userId: map?.['userId']?.S,
+            apiOrigin: map?.['apiOrigin']?.S,
+            postsTopicArn: map?.['postsTopicArn']?.S,
+            profileTopicArn: map?.['profileTopicArn']?.S,
+            name: map?.['name']?.S,
+            photoUrl: map?.['photoUrl'] ? map['photoUrl']?.S : undefined
+        }
+        if (isReducedAccountDetails(trackedAccount)) {
+            return trackedAccount
+        }
+
+        return undefined
+    },
+
     get: async (userId: string): Promise<ReducedAccountDetails> => {
         const requesterDetailsItem = (await Dynamo.client.getItem({
             TableName: process.env.TRACKED_ACCOUNTS_TABLE,
             Key: {
                 userId: {S: userId}
             }
-        }).promise()).Item
+        }).promise())?.Item
 
         if (!!requesterDetailsItem) {
-            return {
-                userId: requesterDetailsItem['userId'].S,
-                apiOrigin: requesterDetailsItem['apiOrigin'].S,
-                postsTopicArn: requesterDetailsItem['postsTopicArn'].S,
-                profileTopicArn: requesterDetailsItem['profileTopicArn'].S,
-                name: requesterDetailsItem['name'].S,
-                photoUrl: requesterDetailsItem['photoUrl'] ? requesterDetailsItem['photoUrl'].S : undefined
-            }
+            return TrackedAccounts.attributeMapToTrackedAccount(requesterDetailsItem)
         } else {
             return undefined
         }
@@ -52,19 +61,12 @@ const TrackedAccounts = {
                 }
             }).promise()
 
-            return usersResult.Responses[process.env.TRACKED_ACCOUNTS_TABLE].reduce((acc: UserDetails, current: AttributeMap) => {
-                const accountDetails = {
-                    userId: current['userId'].S,
-                    apiOrigin: current['apiOrigin'].S,
-                    postsTopicArn: current['postsTopicArn'].S,
-                    profileTopicArn: current['profileTopicArn'].S,
-                    name: current['name'].S,
-                    photoUrl: current['photoUrl'] ? current['photoUrl'].S : undefined
-                }
+            return usersResult?.Responses?.[process.env.TRACKED_ACCOUNTS_TABLE]?.reduce((acc: UserDetails, current: AttributeMap) => {
+                const accountDetails = TrackedAccounts.attributeMapToTrackedAccount(current)
                 acc[accountDetails.userId] = accountDetails
 
                 return acc
-            }, {})
+            }, {}) ?? {}
         }
 
         return {}

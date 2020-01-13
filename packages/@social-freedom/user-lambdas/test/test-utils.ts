@@ -63,7 +63,9 @@ export function setupEnvironmentVariables() {
         POST_EVENTS_HANDLER: "postEventsHandlerArn",
         POSTS_TOPIC: "postsTopic",
         PROFILE_TOPIC: "profileTopic",
-        CORS_ORIGIN: "allowedOrigin"
+        CORS_ORIGIN: "allowedOrigin",
+        FEED_TABLE: "FeedTableName",
+        TRACKED_ACCOUNTS_TABLE: "TrackedAccountsTableName"
     }
 }
 
