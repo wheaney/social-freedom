@@ -1,6 +1,7 @@
-import {AccountDetails, ReducedAccountDetails} from "@social-freedom/types";
+import {AccountDetails, ReducedAccountDetails, APIRequestMessage} from "@social-freedom/types"
 import {AWSError, Request} from "aws-sdk";
 import {PromiseResult} from "aws-sdk/lib/request";
+import {TestObject} from "../../types/test/types/shared";
 
 export const FollowingAccountDetailsFull:AccountDetails = {
     userId: "followingUserId",
@@ -50,6 +51,14 @@ export const ThisAccountDetails: ReducedAccountDetails = {
     postsTopicArn: ThisAccountDetailsFull.identifiers.postsTopicArn
 }
 
+export const TestAPIRequestMessage: APIRequestMessage = {
+    origin: 'origin',
+    path: 'path',
+    authToken: 'authToken',
+    requestMethod: 'POST',
+    requestBody: TestObject
+}
+
 export function setupEnvironmentVariables() {
     process.env = {
         USER_ID: "thisUserId",
@@ -65,7 +74,8 @@ export function setupEnvironmentVariables() {
         PROFILE_TOPIC: "profileTopic",
         CORS_ORIGIN: "allowedOrigin",
         FEED_TABLE: "FeedTableName",
-        TRACKED_ACCOUNTS_TABLE: "TrackedAccountsTableName"
+        TRACKED_ACCOUNTS_TABLE: "TrackedAccountsTableName",
+        API_REQUESTS_QUEUE_URL: "APIRequestsQueueURL"
     }
 }
 

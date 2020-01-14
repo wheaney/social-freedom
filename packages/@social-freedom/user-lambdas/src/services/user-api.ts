@@ -1,22 +1,18 @@
-import * as AWS from "aws-sdk";
 import fetch from "node-fetch";
 import {AuthTokenHeaderName} from "../shared/constants";
+import SQS from "./sqs";
 
 const UserAPI = {
     queueRequest: async (origin: string, path: string, authToken: string,
-                            requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
-                            requestBody?: any) => {
-        return new AWS.SQS().sendMessage({
-            QueueUrl: process.env.API_REQUESTS_QUEUE_URL,
-            MessageGroupId: 'api-requests',
-            MessageBody: JSON.stringify({
-                origin: origin,
-                path: path,
-                authToken: authToken,
-                requestMethod: requestMethod,
-                requestBody: requestBody
-            })
-        }).promise()
+                         requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
+                         requestBody?: any) => {
+        await SQS.sendAPIRequestMessage({
+            origin: origin,
+            path: path,
+            authToken: authToken,
+            requestMethod: requestMethod,
+            requestBody: requestBody
+        })
     },
 
     request: async (origin: string, path: string, authToken: string,
