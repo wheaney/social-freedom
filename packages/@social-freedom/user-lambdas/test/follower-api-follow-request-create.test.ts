@@ -1,9 +1,10 @@
-import {setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
-import {conditionalAutoRespond} from "../src/follower-api-follow-request-create";
+import {OtherUserEvent, setupEnvironmentVariables, ThisAccountDetails} from "./test-utils";
+import {conditionalAutoRespond, hasPreviouslyRejectedRequest} from "../src/follower-api-follow-request-create";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
-    AccountDetailsIncomingFollowRequestsKey
+    AccountDetailsIncomingFollowRequestsKey,
+    AccountDetailsRejectedFollowRequestsKey
 } from "../src/shared/constants";
 import Dynamo from "../src/services/dynamo";
 import TrackedAccounts from "../src/daos/tracked-accounts";
@@ -88,3 +89,14 @@ describe("conditionalAutoRespond", () => {
         expect(mockedSNS.subscribeToProfileEvents).toHaveBeenCalledWith({ foo: 'bar' })
     })
 });
+
+test('hasPreviouslyRejectedRequest should check if this account has been previously rejected', async () => {
+    mockedDynamo.isInSet.mockResolvedValue(true)
+
+    expect(await hasPreviouslyRejectedRequest(OtherUserEvent)).toBe(true)
+
+    expect(mockedDynamo.isInSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsRejectedFollowRequestsKey, 'otherUserId')
+
+    mockedDynamo.isInSet.mockResolvedValue(false)
+    expect(await hasPreviouslyRejectedRequest(OtherUserEvent)).toBe(false)
+})

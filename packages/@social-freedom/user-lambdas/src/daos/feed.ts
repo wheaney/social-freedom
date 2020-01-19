@@ -1,7 +1,7 @@
 import {FeedEntry} from "@social-freedom/types";
 import Dynamo from "../services/dynamo";
 import {FeedTablePartitionKey} from "../shared/constants";
-import {DynamoDB} from "aws-sdk";
+import Helpers from "../shared/helpers";
 
 const Feed = {
     putEntry: async (entry: FeedEntry) => {
@@ -21,18 +21,8 @@ const Feed = {
     },
 
     getEntries: async (lastPostKey?: string) => {
-        let startKey: DynamoDB.Key;
-        if (lastPostKey) {
-            const lastPostId = lastPostKey.substring(lastPostKey.indexOf('-')+1)
-            startKey = {
-                key: {S: FeedTablePartitionKey},
-                timeSortKey: {S: lastPostKey},
-                id: {S: lastPostId}
-            }
-        }
-
         return Dynamo.queryTimestampIndex(process.env.FEED_TABLE, 'FeedByTimestamp',
-            FeedTablePartitionKey, startKey)
+            FeedTablePartitionKey, Helpers.keyStringToDynamoDBKey(lastPostKey, FeedTablePartitionKey))
     }
 }
 

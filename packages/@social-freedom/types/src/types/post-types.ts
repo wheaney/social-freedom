@@ -1,4 +1,5 @@
 import {UserDetails} from "./account-types";
+import TypeUtils from "../type-utils";
 
 export enum PostType {
     Text = 'Text',
@@ -16,6 +17,10 @@ export type BasicPostDetails = {
 export type PostDetails = BasicPostDetails & {
     id: string,
     timestamp: number
+}
+
+export function isPostDetails(object: any): object is PostDetails {
+    return TypeUtils.isType('PostDetails', object, 'id', 'timestamp', 'userId', 'type', 'body')
 }
 
 export type GetPostsRequest = {

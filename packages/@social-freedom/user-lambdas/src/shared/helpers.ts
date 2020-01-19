@@ -1,3 +1,5 @@
+import {DynamoDB} from "aws-sdk";
+
 const Helpers = {
     resolveInObject: async <T, U extends { [key in keyof T]: any }>(object: T): Promise<U> => {
         const startTime = Date.now()
@@ -26,6 +28,19 @@ const Helpers = {
 
     isNotNullish: (object: any) => {
         return object !== null && object !== undefined
+    },
+
+    keyStringToDynamoDBKey: (lastKey: string, partitionKey: string): DynamoDB.Key => {
+        if (lastKey) {
+            const lastId = lastKey.substring(lastKey.indexOf('-') + 1)
+            return {
+                key: {S: partitionKey},
+                timeSortKey: {S: lastKey},
+                id: {S: lastId}
+            }
+        }
+
+        return undefined
     }
 }
 

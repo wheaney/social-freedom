@@ -1,9 +1,11 @@
 import APIGateway, {EventFunctions} from "./shared/api-gateway";
 import {APIGatewayEvent} from "aws-lambda";
 import {PostsTablePartitionKey} from "./shared/constants";
-import {GetPostsRequest, GetPostsResponse, PostType} from "@social-freedom/types";
+import {GetPostsRequest, GetPostsResponse, PostDetails, PostType} from "@social-freedom/types";
 import TrackedAccounts from "./daos/tracked-accounts";
 import Dynamo from "./services/dynamo";
+import Helpers from "./shared/helpers";
+import {AttributeMap} from "aws-sdk/clients/dynamodb";
 
 export const handler = async (event: APIGatewayEvent) => {
     return await APIGateway.handleEvent(async () => {
@@ -17,32 +19,24 @@ export const handler = async (event: APIGatewayEvent) => {
 }
 
 export const postsGet = async (request: GetPostsRequest): Promise<GetPostsResponse> => {
-    let startKey;
-    if (request.lastPostKey) {
-        const lastPostId = request.lastPostKey.substring(request.lastPostKey.indexOf('-')+1)
-        startKey = {
-            key: {S: PostsTablePartitionKey},
-            timeSortKey: {S: request.lastPostKey},
-            id: {S: lastPostId}
-        }
-    }
     const queryResult = await Dynamo.queryTimestampIndex(process.env.POSTS_TABLE, 'PostsByTimestamp',
-        PostsTablePartitionKey, startKey)
+        PostsTablePartitionKey, Helpers.keyStringToDynamoDBKey(request.lastPostKey, PostsTablePartitionKey))
 
-    const response:GetPostsResponse = {
-        users: {},
-        posts: queryResult.Items.map(postValue => ({
-            id: postValue['id'].S,
-            userId: postValue['userId'].S,
-            type: postValue['type'].S as PostType,
-            body: postValue['body'].S,
-            mediaUrl: postValue['mediaUrl'] ? postValue['mediaUrl'].S : undefined,
-            timestamp: Number.parseInt(postValue['timestamp'].N)
-        })),
-        lastPostKey: queryResult.LastEvaluatedKey && queryResult.LastEvaluatedKey['timeSortKey'].S
+    const posts: PostDetails[] = queryResult.Items.map(dynamoValueToPostDetails)
+    return {
+        users: await TrackedAccounts.getAll(posts.map(post => post.userId), request.cachedUsers),
+        posts: posts,
+        lastPostKey: queryResult.LastEvaluatedKey?.['timeSortKey'].S
     }
+}
 
-    response.users = await TrackedAccounts.getAll(response.posts.map(post => post.userId), request.cachedUsers)
-
-    return response
+export const dynamoValueToPostDetails = (value: AttributeMap): PostDetails => {
+    return {
+        id: value['id'].S,
+        userId: value['userId'].S,
+        type: PostType[value['type'].S],
+        body: value['body'].S,
+        mediaUrl: value['mediaUrl']?.S,
+        timestamp: Number.parseInt(value['timestamp'].N)
+    }
 }

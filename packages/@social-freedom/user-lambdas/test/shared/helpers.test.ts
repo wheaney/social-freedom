@@ -40,3 +40,17 @@ test('isNotNullish should return whether an object is nullish', () => {
     expect(Helpers.isNotNullish('')).toBe(true)
     expect(Helpers.isNotNullish(false)).toBe(true)
 })
+
+describe('keyStringToDynamoKey', () => {
+    it('should handle empty/missing lastKey', () => {
+        expect(Helpers.keyStringToDynamoDBKey(undefined, 'partitionKey')).toBeUndefined()
+    })
+
+    it('should return a valid DynamoDB.Key', () => {
+        expect(Helpers.keyStringToDynamoDBKey('lastEntry-id', 'partitionKey')).toStrictEqual({
+            key: {S: 'partitionKey'},
+            timeSortKey: {S: 'lastEntry-id'},
+            id: {S: 'id'}
+        })
+    })
+})
