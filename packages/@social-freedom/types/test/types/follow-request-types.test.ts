@@ -2,42 +2,34 @@ import {
     isFollowRequest,
     isFollowRequestCreateResponse,
     isFollowRequestResponse,
-    isInternalFollowResponse,
-    ReducedAccountDetails
+    isInternalFollowResponse
 } from "../../src";
 import TypeUtils from "../../src/type-utils";
+import {TestAccountDetails} from "./shared";
 
 afterAll((done) => {
     jest.restoreAllMocks()
     done()
 })
 
-const CompleteAccountDetails: ReducedAccountDetails = {
-    userId: 'userId',
-    apiOrigin: 'apiOrigin',
-    name: 'name',
-    postsTopicArn: 'postsTopicArn',
-    profileTopicArn: 'profileTopicArn'
-}
-
 describe('isFollowRequest', () => {
     it('should pass', () => {
-        expect(isFollowRequest(CompleteAccountDetails)).toBe(true)
+        expect(isFollowRequest(TestAccountDetails)).toBe(true)
     })
 
     it('should fail on an invalid object', () => {
         expect(() => isFollowRequest({
-            ...CompleteAccountDetails,
+            ...TestAccountDetails,
             name: undefined
         })).toThrow(new RegExp('Invalid FollowRequest .*'))
     })
 })
 
 describe('isFollowRequestResponse', () => {
-    it('should pass with no accountDetails when accepted is false', () => {
-        expect(isFollowRequestResponse({
+    it('should fail with no accountDetails when accepted is false', () => {
+        expect(() => isFollowRequestResponse({
             accepted: false
-        })).toBe(true)
+        })).toThrow(new RegExp('Invalid FollowRequestResponse .*'))
     })
 
     it('should fail with no accountDetails when accepted is true', () => {
@@ -46,17 +38,17 @@ describe('isFollowRequestResponse', () => {
         })).toThrow(new RegExp('Invalid FollowRequestResponse .*'))
     })
 
-    it('should pass with accountDetails when accepted is true', () => {
-        expect(isFollowRequestResponse({
-            accepted: true,
-            accountDetails: CompleteAccountDetails
-        })).toBe(true)
-    })
-
     it('should fail when accepted is not present', () => {
         expect(() => isFollowRequestResponse({
-            accountDetails: CompleteAccountDetails
+            accountDetails: TestAccountDetails
         })).toThrow(new RegExp('Invalid FollowRequestResponse .*'))
+    })
+
+    it('should pass with accountDetails when accepted is present', () => {
+        expect(isFollowRequestResponse({
+            accepted: true,
+            accountDetails: TestAccountDetails
+        })).toBe(true)
     })
 })
 
@@ -74,7 +66,8 @@ describe('isFollowRequestCreateResponse', () => {
     it('should pass with a response that is valid', () => {
         expect(isFollowRequestCreateResponse({
                 response: {
-                    accepted: false
+                    accepted: true,
+                    accountDetails: TestAccountDetails
                 }
             }
         )).toBe(true)
@@ -85,10 +78,10 @@ describe('isInternalFollowResponse', () => {
     it('should delegate to TypeUtils.isType', () => {
         const isTypeMock = jest.spyOn(TypeUtils, 'isType')
         isTypeMock.mockReturnValue(true)
-        expect(isInternalFollowResponse(CompleteAccountDetails)).toBe(true)
+        expect(isInternalFollowResponse(TestAccountDetails)).toBe(true)
 
         isTypeMock.mockReturnValue(false)
-        expect(isInternalFollowResponse(CompleteAccountDetails)).toBe(false)
-        expect(isTypeMock).toHaveBeenCalledWith('InternalFollowResponse', CompleteAccountDetails, 'userId', 'accepted')
+        expect(isInternalFollowResponse(TestAccountDetails)).toBe(false)
+        expect(isTypeMock).toHaveBeenCalledWith('InternalFollowResponse', TestAccountDetails, 'userId', 'accepted')
     })
 })

@@ -31,8 +31,12 @@ export function isFollowRequest(object: any): object is FollowRequest {
 }
 
 export function isFollowRequestResponse(object: any): object is FollowRequestResponse {
-    if (TypeUtils.isNotNullish(object.accepted) && (!object.accepted || !!object.accountDetails)) {
-        return true
+    try {
+        if (TypeUtils.isNotNullish(object.accepted) && isReducedAccountDetails(object.accountDetails)) {
+            return true
+        }
+    } catch (err) {
+        // do nothing
     }
 
     return TypeUtils.failedCheck('FollowRequestResponse', object)

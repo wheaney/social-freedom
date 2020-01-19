@@ -29,7 +29,7 @@ type EventValues = DefaultEventValues & {
 }
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         const eventValues: EventValues = await APIGateway.internalAPIIdentityCheck(event, EventFunctions)
 
         await internalFollowRequestRespond(eventValues)
@@ -67,7 +67,7 @@ export const internalFollowRequestRespond = async (eventValues: EventValues) => 
         promises.push(UserAPI.queueRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', authToken,
             'POST', {
                 accepted: eventBody.accepted,
-                accountDetails: eventBody.accepted ? thisAccountDetails : undefined
+                accountDetails: thisAccountDetails
             }))
 
         if (eventBody.accepted) {

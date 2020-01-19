@@ -6,7 +6,7 @@ import TrackedAccounts from "./daos/tracked-accounts";
 import Dynamo from "./services/dynamo";
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         await APIGateway.followerAPIIdentityCheck(event)
 
         return await postsGet({

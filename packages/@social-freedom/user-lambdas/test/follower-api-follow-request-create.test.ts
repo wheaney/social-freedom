@@ -45,7 +45,8 @@ describe("conditionalAutoRespond", () => {
             hasPreviouslyRejectedRequest: true
         })).toStrictEqual({
             response: {
-                accepted: false
+                accepted: false,
+                accountDetails: ThisAccountDetails
             }
         })
 

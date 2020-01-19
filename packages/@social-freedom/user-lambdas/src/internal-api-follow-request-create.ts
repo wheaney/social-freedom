@@ -7,7 +7,7 @@ import TrackedAccounts from "./daos/tracked-accounts";
 import UserAPI from "./services/user-api";
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         const eventValues = await APIGateway.internalAPIIdentityCheck(event)
 
         await internalFollowRequestCreate(eventValues.authToken, eventValues.eventBody)

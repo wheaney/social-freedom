@@ -1,5 +1,4 @@
 import {APIGatewayEvent} from "aws-lambda";
-import {FollowRequestCreateResponse, isFollowRequest, ReducedAccountDetails} from "@social-freedom/types";
 import {
     AccountDetailsFollowersKey,
     AccountDetailsFollowingKey,
@@ -11,6 +10,7 @@ import ThisAccount from "./daos/this-account";
 import Dynamo from "./services/dynamo";
 import TrackedAccounts from "./daos/tracked-accounts";
 import SNS from "./services/sns";
+import {FollowRequestCreateResponse, isFollowRequest, ReducedAccountDetails} from "@social-freedom/types";
 
 type EventValues = DefaultEventValues & {
     isFollowing: boolean,
@@ -20,7 +20,7 @@ type EventValues = DefaultEventValues & {
 }
 
 export const handler = async (event: APIGatewayEvent): Promise<any> => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         const eventValues: EventValues = await APIGateway.resolveEventValues(event, {
             isFollowing: EventFunctions.isFollowingRequestingUser,
             isAccountPublic: ThisAccount.isPublic,
@@ -48,7 +48,8 @@ export const conditionalAutoRespond = async (eventValues: EventValues): Promise<
     if (eventValues.hasPreviouslyRejectedRequest) {
         return {
             response: {
-                accepted: false
+                accepted: false,
+                accountDetails: eventValues.thisAccountDetails
             }
         }
     } else if (eventValues.isAccountPublic || eventValues.isFollowing) {

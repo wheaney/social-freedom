@@ -8,7 +8,7 @@ const TypeUtils = {
     },
 
     hasAllFields: (object: any, ...fields: string[]): boolean => {
-        return !fields.find(field => TypeUtils.isNullish(object[field]))
+        return !fields.find(field => TypeUtils.isNullish(object?.[field]))
     },
 
     isType: (type: string, object: any, ...fields: string[]) =>  {

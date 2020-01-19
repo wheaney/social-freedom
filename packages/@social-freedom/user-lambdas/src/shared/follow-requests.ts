@@ -26,11 +26,8 @@ export const handleFollowRequestResponse = async (response: FollowRequestRespons
 export const asyncFollowRequestCreate = async (cognitoAuthToken: string, followRequest: FollowRequest): Promise<void> => {
     const response = await UserAPI.request(followRequest.apiOrigin, 'follower/follow-requests',
         cognitoAuthToken, 'POST',  await ThisAccount.getDetails())
-    if (isFollowRequestCreateResponse(response)) {
-        console.error(JSON.stringify(response))
-        if (Helpers.isNotNullish(response.response)) {
-            // handle auto-response
-            await handleFollowRequestResponse(response.response)
-        }
+    if (isFollowRequestCreateResponse(response) && Helpers.isNotNullish(response.response)) {
+        // if the account auto-responded, handle it
+        await handleFollowRequestResponse(response.response)
     }
 }

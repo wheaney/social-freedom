@@ -22,7 +22,7 @@
     "types": ["aws-lambda", "jest", "uuid", "types"],
     "baseUrl": "./src",
     "paths": {
-      "@social-freedom/types": ["../../../types/dist", "../../../types/src"]
+      "@social-freedom/types": ["../../types/dist", "../../types/src"]
     }
   },
   "include": [

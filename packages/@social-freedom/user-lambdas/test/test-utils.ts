@@ -2,6 +2,8 @@ import {AccountDetails, ReducedAccountDetails, APIRequestMessage} from "@social-
 import {AWSError, Request} from "aws-sdk";
 import {PromiseResult} from "aws-sdk/lib/request";
 import {TestObject} from "../../types/test/types/shared";
+import {AuthTokenHeaderName} from "../src/shared/constants";
+import {APIGatewayEvent} from "aws-lambda";
 
 export const FollowingAccountDetailsFull:AccountDetails = {
     userId: "followingUserId",
@@ -61,6 +63,7 @@ export const TestAPIRequestMessage: APIRequestMessage = {
 
 export function setupEnvironmentVariables() {
     process.env = {
+        ...process.env,
         USER_ID: "thisUserId",
         REGION: "us-west-1",
         ACCOUNT_ID: "12345",
@@ -76,6 +79,13 @@ export function setupEnvironmentVariables() {
         FEED_TABLE: "FeedTableName",
         TRACKED_ACCOUNTS_TABLE: "TrackedAccountsTableName",
         API_REQUESTS_QUEUE_URL: "APIRequestsQueueURL"
+    }
+}
+
+export function allowSynchronousApiRequests() {
+    process.env = {
+        ...process.env,
+        ALLOW_SYNCHRONOUS_API_REQUESTS: 'true'
     }
 }
 
@@ -97,3 +107,30 @@ export function mockConsole(level: 'debug' | 'error' | 'info' | 'log' | 'warn') 
 
     return consoleMock
 }
+
+export const ThisUserEvent = {
+    requestContext: {
+        authorizer: {
+            claims: {
+                sub: "thisUserId"
+            }
+        }
+    },
+    headers: {
+        [AuthTokenHeaderName]: "authToken"
+    },
+    body: JSON.stringify({foo: 'bar'}),
+    queryStringParameters: {
+        cachedUsers: "userId,otherUserId"
+    }
+} as unknown as APIGatewayEvent
+
+export const OtherUserEvent = {
+    requestContext: {
+        authorizer: {
+            claims: {
+                sub: "otherUserId"
+            }
+        }
+    }
+} as unknown as APIGatewayEvent

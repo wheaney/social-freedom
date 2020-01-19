@@ -1,4 +1,9 @@
-import {mockConsole, setupEnvironmentVariables, TestAPIRequestMessage} from "../test-utils";
+import {
+    allowSynchronousApiRequests,
+    mockConsole,
+    setupEnvironmentVariables,
+    TestAPIRequestMessage
+} from "../test-utils";
 import SQS from "../../src/services/sqs";
 import UserAPI from "../../src/services/user-api";
 import {TestObject} from "../../../types/test/types/shared";
@@ -42,7 +47,7 @@ describe('reequest', () => {
     })
 
     it('should blow up on non-200 response', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({ ok: false, status: 500 } as unknown as Response)
 
         try {
@@ -54,7 +59,7 @@ describe('reequest', () => {
     })
 
     it('should call fetch with no body or content headers for a GET request', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({
             ok: true,
             text: async () => ''
@@ -71,7 +76,7 @@ describe('reequest', () => {
     })
 
     it('should call fetch with no body or content headers for a POST with no body', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({
             ok: true,
             text: async () => ''
@@ -88,7 +93,7 @@ describe('reequest', () => {
     })
 
     it('should call fetch with a body and content headers for a POST with body content', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({
             ok: true,
             text: async () => ''
@@ -109,7 +114,7 @@ describe('reequest', () => {
     })
 
     it('should return nothing if response body is empty', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({
             ok: true,
             text: async () => ''
@@ -121,7 +126,7 @@ describe('reequest', () => {
     })
 
     it('should log an error if response body is not JSON', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({
             ok: true,
             text: async () => 'not json'
@@ -133,7 +138,7 @@ describe('reequest', () => {
     })
 
     it('should return an object if response body is JSON', async () => {
-        process.env.ALLOW_SYNCHRONOUS_API_REQUESTS = 'true'
+        allowSynchronousApiRequests()
         mockFetch.mockResolvedValue({
             ok: true,
             text: async () => JSON.stringify(TestObject)

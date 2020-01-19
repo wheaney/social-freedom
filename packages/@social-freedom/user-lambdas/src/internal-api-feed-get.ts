@@ -5,7 +5,7 @@ import TrackedAccounts from "./daos/tracked-accounts";
 import Feed from "./daos/feed";
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         await APIGateway.internalAPIIdentityCheck(event)
 
         return await feedGet({

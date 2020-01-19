@@ -14,9 +14,9 @@ export type DefaultAPIGatewayEventFunctions = {
 export type DefaultEventValues = { [key in keyof DefaultAPIGatewayEventFunctions]: any }
 
 const APIGateway = {
-    proxyWrapper: async (proxyFunction: () => Promise<any>) => {
+    handleEvent: async (handler: () => Promise<any>) => {
         try {
-            return APIGateway.lambdaResponse(200, await proxyFunction())
+            return APIGateway.lambdaResponse(200, await handler())
         } catch (err) {
             // TODO - add handling for unauthorized, return 401
             console.error(err)
@@ -96,7 +96,7 @@ export const EventFunctions = {
     },
 
     // should only be used within follower-api lambdas
-    isFollowingRequestingUser: (event: APIGatewayEvent) => {
+    isFollowingRequestingUser: (event: APIGatewayEvent): Promise<boolean> => {
         return ThisAccount.isFollowing(EventFunctions.getUserId(event))
     },
 

@@ -7,7 +7,7 @@ import Dynamo from "./services/dynamo";
 import SNS from "./services/sns";
 
 export const handler = async (event:APIGatewayEvent) => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         const eventValues = await APIGateway.internalAPIIdentityCheck(event)
 
         await putPost({

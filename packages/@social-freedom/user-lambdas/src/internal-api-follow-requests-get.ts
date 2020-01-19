@@ -11,7 +11,7 @@ type EventValues = DefaultEventValues & {
 }
 
 export const handler = async (event: APIGatewayEvent) => {
-    return await APIGateway.proxyWrapper(async () => {
+    return await APIGateway.handleEvent(async () => {
         const eventValues: EventValues = await APIGateway.internalAPIIdentityCheck(event, {
             cachedUsers: EventFunctions.cachedUsers,
             incomingFollowRequests: incomingFollowRequests
