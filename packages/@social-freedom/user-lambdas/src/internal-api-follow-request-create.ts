@@ -19,7 +19,7 @@ export const internalFollowRequestCreate = async (cognitoAuthToken: string, foll
     await Promise.all([
         Dynamo.addToSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, followRequest.userId),
         TrackedAccounts.put(followRequest),
-        UserAPI.queueRequest(process.env.API_ORIGIN, 'internal/async/follow-requests',
+        UserAPI.asyncRequest(process.env.API_ORIGIN, 'internal/async/follow-requests',
             cognitoAuthToken, 'POST', followRequest)
     ])
 }

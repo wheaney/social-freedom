@@ -29,8 +29,8 @@ export class ApiHelper {
         return resource
     }
 
-    constructLambdaApiMethod(resource: IResource, method: Method, handler: string) {
-        const lambda = this.lambdaHelper.constructLambda(handler)
+    constructLambdaApiMethod(resource: IResource, method: Method, handler: string, async: boolean = false) {
+        const lambda = this.lambdaHelper.constructLambda(handler, async)
         resource.addMethod(method, new LambdaIntegration(lambda, {
             proxy: true,
             allowTestInvoke: true

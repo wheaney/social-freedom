@@ -2,9 +2,9 @@ import {
     allowSynchronousApiRequests,
     mockConsole,
     setupEnvironmentVariables,
-    TestAPIRequestMessage
+    TestAsyncAPIRequest
 } from "../test-utils";
-import SQS from "../../src/services/sqs";
+import Lambda from "../../src/services/lambda";
 import UserAPI from "../../src/services/user-api";
 import {TestObject} from "../../../types/test/types/shared";
 import fetch, {Response} from "node-fetch";
@@ -27,12 +27,12 @@ beforeEach(async (done) => {
 
 describe('queueRequest', () => {
     it('should call sendAPIRequestMessage', async () => {
-        const sendMessageMock = jest.spyOn(SQS, 'sendAPIRequestMessage')
-        sendMessageMock.mockResolvedValue()
+        const triggerRequestMock = jest.spyOn(Lambda, 'triggerAsyncAPIRequest')
+        triggerRequestMock.mockResolvedValue()
 
-        await UserAPI.queueRequest('origin', 'path', 'authToken', 'POST', TestObject)
+        await UserAPI.asyncRequest('origin', 'path', 'authToken', 'POST', TestObject)
 
-        expect(sendMessageMock).toHaveBeenCalledWith(TestAPIRequestMessage)
+        expect(triggerRequestMock).toHaveBeenCalledWith(TestAsyncAPIRequest)
     })
 })
 

@@ -83,7 +83,7 @@ describe("internalFollowRequestRespond", () => {
     it('should reciprocate if accepting', async () => {
         await internalFollowRequestRespond(testEventValues)
 
-        expect(mockedUserAPI.queueRequest.mock.calls).toMatchObject([
+        expect(mockedUserAPI.asyncRequest.mock.calls).toMatchObject([
             ['apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
                 accepted: true,
                 accountDetails: ThisAccountDetails
@@ -101,7 +101,7 @@ describe("internalFollowRequestRespond", () => {
             isThisAccountPublic: true
         })
 
-        expect(mockedUserAPI.queueRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
+        expect(mockedUserAPI.asyncRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
             accepted: true,
             accountDetails: ThisAccountDetails
         })
@@ -116,7 +116,7 @@ describe("internalFollowRequestRespond", () => {
             isAlreadyFollowingUser: true
         })
 
-        expect(mockedUserAPI.queueRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
+        expect(mockedUserAPI.asyncRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
             accepted: true,
             accountDetails: ThisAccountDetails
         })
@@ -130,7 +130,7 @@ describe("internalFollowRequestRespond", () => {
             ...testEventValues,
             eventBody: { accepted: false, userId: 'otherUserId' }
         })
-        expect(mockedUserAPI.queueRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
+        expect(mockedUserAPI.asyncRequest).toHaveBeenCalledWith('apiDomainName', 'follower/follow-request-response', 'authToken', 'POST', {
             accepted: false,
             accountDetails: ThisAccountDetails
         })

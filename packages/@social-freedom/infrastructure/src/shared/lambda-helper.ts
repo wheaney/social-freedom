@@ -1,6 +1,9 @@
-import {Stack} from "@aws-cdk/core";
+import {Duration, Stack} from "@aws-cdk/core";
 import {IRole} from "@aws-cdk/aws-iam";
 import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
+
+const SyncTimeoutSeconds = 3
+const AsyncTimeoutSeconds = 15
 
 export default class LambdaHelper {
     readonly stack: Stack;
@@ -17,7 +20,7 @@ export default class LambdaHelper {
         this.lambdas = []
     }
 
-    constructLambda(handler: string):LambdaFunction {
+    constructLambda(handler: string, async: boolean = false):LambdaFunction {
         // TODO - DLQ setup for lambda failures
 
         // Lambda references assume that tsc has compiled all *.ts files to the dist directory
@@ -26,7 +29,8 @@ export default class LambdaHelper {
             code: this.code,
             handler: `${handler}.handler`,
             role: this.role,
-            environment: this.envVars
+            environment: this.envVars,
+            timeout: Duration.seconds(async ? AsyncTimeoutSeconds : SyncTimeoutSeconds)
         });
 
         this.lambdas.push(lambda)

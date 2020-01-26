@@ -39,6 +39,15 @@ beforeEach(async (done) => {
 });
 
 describe("putPost", () => {
+    it("should blow up if wrong type is received", async () => {
+        try {
+            await putPost({})
+            fail("should have blown up")
+        } catch (err) {
+            expect(err.message).toMatch(new RegExp('Invalid PostDetails .*'))
+        }
+    })
+
     it("should succeed when creating a new post", async () => {
         setAWSMock(putItemMock, Promise.resolve())
         setAWSMock(publishMock, Promise.resolve())

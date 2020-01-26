@@ -1,12 +1,12 @@
 import fetch from "node-fetch";
 import {AuthTokenHeaderName} from "../shared/constants";
-import SQS from "./sqs";
+import Lambda from "./lambda";
 
 const UserAPI = {
-    queueRequest: async (origin: string, path: string, authToken: string,
+    asyncRequest: async (origin: string, path: string, authToken: string,
                          requestMethod: 'POST' | 'GET' | 'PUT' | 'DELETE',
                          requestBody?: any) => {
-        await SQS.sendAPIRequestMessage({
+        await Lambda.triggerAsyncAPIRequest({
             origin: origin,
             path: path,
             authToken: authToken,

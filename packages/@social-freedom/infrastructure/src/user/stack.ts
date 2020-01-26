@@ -10,10 +10,7 @@ import {
 } from "@aws-cdk/aws-iam";
 import {AttributeType, BillingMode, ProjectionType, Table} from "@aws-cdk/aws-dynamodb";
 import {Bucket, BucketAccessControl} from "@aws-cdk/aws-s3";
-import {
-    CloudFrontWebDistribution,
-    OriginAccessIdentity
-} from "@aws-cdk/aws-cloudfront";
+import {CloudFrontWebDistribution, OriginAccessIdentity} from "@aws-cdk/aws-cloudfront";
 import {Subscription, SubscriptionProtocol, Topic} from "@aws-cdk/aws-sns";
 import {Code, Function as LambdaFunction, Runtime} from "@aws-cdk/aws-lambda";
 import {AuthorizationType, CfnAuthorizer, EndpointType, RestApi} from "@aws-cdk/aws-apigateway";
@@ -22,8 +19,6 @@ import {ReadWriteType, Trail} from "@aws-cdk/aws-cloudtrail";
 import LambdaHelper from "../shared/lambda-helper";
 import {ApiHelper} from "../shared/api-helper";
 import {CustomResource, CustomResourceProvider} from "@aws-cdk/aws-cloudformation";
-import {Queue} from "@aws-cdk/aws-sqs";
-import {SqsEventSource} from "@aws-cdk/aws-lambda-event-sources";
 
 export class UserStack extends cdk.Stack {
     readonly userId: string;
@@ -122,16 +117,6 @@ export class UserStack extends cdk.Stack {
             providerArns: [userPoolArn]
         })
 
-        const APIRequestsQueue = new Queue(this, "APIRequestsQueue", {
-            fifo: true,
-            queueName: `${this.stackName}-api-requests-queue.fifo`,
-            contentBasedDeduplication: true
-        })
-        ExecutionerRole.addToPolicy(new PolicyStatement({
-            resources: [APIRequestsQueue.queueArn],
-            actions: ['sqs:SendMessage', 'sqs:ReceiveMessage', 'sqs:DeleteMessage', 'sqs:GetQueueAttributes']
-        }))
-
         const EnvironmentVariables = {
             USER_ID: this.userId,
             ACCOUNT_ID: cdk.Aws.ACCOUNT_ID,
@@ -146,8 +131,7 @@ export class UserStack extends cdk.Stack {
             MEDIA_BUCKET: MediaBucket.bucketName,
             CDN_DOMAIN_NAME: WebDistribution.domainName,
             API_ORIGIN: Api.url,
-            CORS_ORIGIN: isDevelopment ? '*' : federalWebsiteOrigin,
-            API_REQUESTS_QUEUE_URL: APIRequestsQueue.queueUrl
+            CORS_ORIGIN: isDevelopment ? '*' : federalWebsiteOrigin
         }
 
         const LambdaCode = Code.fromAsset('./node_modules/@social-freedom/user-lambdas')
@@ -164,16 +148,19 @@ export class UserStack extends cdk.Stack {
             protocol: SubscriptionProtocol.LAMBDA
         })
 
-        const APIRequestsSQSHandlerLambda = new LambdaFunction(this, 'APIRequestsHandler', {
+        const RequesterRole = new Role(this, "Requester", {
+            assumedBy: new ServicePrincipal("lambda.amazonaws.com")
+        });
+        const AsyncAPIRequestHandler = new LambdaFunction(this, 'AsyncAPIRequestHandler', {
             runtime: Runtime.NODEJS_12_X,
             code: LambdaCode,
-            handler: 'sqs-handle-api-requests.handler',
-            role: ExecutionerRole,
+            handler: 'lambda-trigger-async-api-request.handler',
+            role: RequesterRole,
             environment: {
                 ALLOW_SYNCHRONOUS_API_REQUESTS: "true"
             }
         });
-        APIRequestsSQSHandlerLambda.addEventSource(new SqsEventSource(APIRequestsQueue))
+        AsyncAPIRequestHandler.grantInvoke(ExecutionerRole)
 
         // environment variables are set in PostStackCreationLambda to prevent circular dependencies
         const APILambdas = new LambdaHelper(this, ExecutionerRole, {}, LambdaCode)
@@ -210,7 +197,7 @@ export class UserStack extends cdk.Stack {
         const AsyncApiUtils = new ApiHelper(APILambdas, CognitoAuthorizer, '')
         const InternalAsyncApi = InternalApi.addResource('async')
         const InternalAsyncFollowRequestsApi = InternalAsyncApi.addResource('follow-requests')
-        AsyncLambdas.push(AsyncApiUtils.constructLambdaApiMethod(InternalAsyncFollowRequestsApi, 'POST', 'internal-async-api-follow-request-create'))
+        AsyncLambdas.push(AsyncApiUtils.constructLambdaApiMethod(InternalAsyncFollowRequestsApi, 'POST', 'internal-async-api-follow-request-create', true))
 
         this.constructSnsTopicSubscriptionValidation(APILambdas.constructLambda('sns-audit-new-sns-subscription'))
 
@@ -237,8 +224,12 @@ export class UserStack extends cdk.Stack {
                 EnvironmentVariables: {
                     ...EnvironmentVariables,
                     PROFILE_EVENTS_HANDLER: ProfileEventsHandler.functionArn,
-                    POST_EVENTS_HANDLER: PostEventsHandler.functionArn
-                }
+                    POST_EVENTS_HANDLER: PostEventsHandler.functionArn,
+                    ASYNC_API_REQUEST_HANDLER: AsyncAPIRequestHandler.functionArn
+                },
+
+                // property change will force CustomResource to run on all deployments
+                Timestamp: Date.now()
             }
         })
     }

@@ -1,4 +1,4 @@
-import {AccountDetails, ReducedAccountDetails, APIRequestMessage} from "@social-freedom/types"
+import {AccountDetails, ReducedAccountDetails, AsyncAPIRequest} from "@social-freedom/types"
 import {AWSError, Request} from "aws-sdk";
 import {PromiseResult} from "aws-sdk/lib/request";
 import {TestObject} from "../../types/test/types/shared";
@@ -53,7 +53,7 @@ export const ThisAccountDetails: ReducedAccountDetails = {
     postsTopicArn: ThisAccountDetailsFull.identifiers.postsTopicArn
 }
 
-export const TestAPIRequestMessage: APIRequestMessage = {
+export const TestAsyncAPIRequest: AsyncAPIRequest = {
     origin: 'origin',
     path: 'path',
     authToken: 'authToken',

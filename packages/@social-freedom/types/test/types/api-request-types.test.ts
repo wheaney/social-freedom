@@ -1,6 +1,6 @@
 import TypeUtils from "../../src/type-utils";
 import {TestObject} from "./shared";
-import {isAPIRequestMessage} from "../../src/types/api-request-types";
+import {isAsyncAPIRequest} from "../../src/types/api-request-types";
 
 afterAll((done) => {
     jest.restoreAllMocks()
@@ -8,14 +8,14 @@ afterAll((done) => {
 })
 
 
-describe('isAPIRequestMessage', () => {
+describe('isAsyncAPIRequest', () => {
     it('should delegate to TypeUtils.isType', () => {
         const isTypeMock = jest.spyOn(TypeUtils, 'isType')
         isTypeMock.mockReturnValue(true)
-        expect(isAPIRequestMessage(TestObject)).toBe(true)
+        expect(isAsyncAPIRequest(TestObject)).toBe(true)
+        expect(isTypeMock).toHaveBeenCalledWith('AsyncAPIRequest', TestObject, 'origin', 'path', 'authToken', 'requestMethod')
 
         isTypeMock.mockReturnValue(false)
-        expect(isAPIRequestMessage(TestObject)).toBe(false)
-        expect(isTypeMock).toHaveBeenCalledWith('APIRequestMessage', TestObject, 'origin', 'path', 'authToken', 'requestMethod')
+        expect(isAsyncAPIRequest(TestObject)).toBe(false)
     })
 })

@@ -28,7 +28,7 @@
     "semantic-ui-react": "^0.88.2"
   },
   "devDependencies": {
-    "react-scripts": "file:../../../node_modules/react-scripts",
+    "react-scripts": "3.3.0",
     "@social-freedom/types": "^0.0.8"
   },
   "browserslist": {

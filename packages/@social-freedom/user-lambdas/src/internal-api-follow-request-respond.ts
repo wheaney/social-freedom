@@ -64,7 +64,7 @@ export const internalFollowRequestRespond = async (eventValues: EventValues) => 
     const {eventBody, authToken, requestExists, requesterDetails, thisAccountDetails, isThisAccountPublic, isAlreadyFollowingUser} = eventValues
     if (isInternalFollowResponse(eventBody) && requestExists && requesterDetails) {
         const promises = []
-        promises.push(UserAPI.queueRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', authToken,
+        promises.push(UserAPI.asyncRequest(requesterDetails.apiOrigin, 'follower/follow-request-response', authToken,
             'POST', {
                 accepted: eventBody.accepted,
                 accountDetails: thisAccountDetails
@@ -76,7 +76,7 @@ export const internalFollowRequestRespond = async (eventValues: EventValues) => 
             if (!isThisAccountPublic && !isAlreadyFollowingUser) {
                 promises.push(
                     Dynamo.addToSet(process.env.ACCOUNT_DETAILS_TABLE, AccountDetailsOutgoingFollowRequestsKey, eventBody.userId),
-                    UserAPI.queueRequest(process.env.API_ORIGIN, 'internal/async/follow-requests',
+                    UserAPI.asyncRequest(process.env.API_ORIGIN, 'internal/async/follow-requests',
                         authToken, 'POST', requesterDetails))
             }
         } else {

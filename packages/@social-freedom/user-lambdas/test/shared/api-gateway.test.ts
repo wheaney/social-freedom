@@ -96,7 +96,7 @@ describe('APIGateway', () => {
             resolveValuesMock.mockImplementation(async (event: APIGatewayEvent) => ({
                 ...testEventValues,
                 userId: "otherUserId",
-                isFollowing: false
+                isFollowedBy: false
             }))
 
             try {
@@ -110,7 +110,7 @@ describe('APIGateway', () => {
             const resolveValuesMock = jest.spyOn(APIGateway, 'resolveEventValues')
             const isFollowingEventValues = {
                 ...testEventValues,
-                isFollowing: true
+                isFollowedBy: true
             }
             resolveValuesMock.mockImplementation(async (event: APIGatewayEvent) => isFollowingEventValues)
             expect(await APIGateway.followerAPIIdentityCheck(ThisUserEvent, testEventFunctions))
@@ -118,7 +118,7 @@ describe('APIGateway', () => {
 
             expect(resolveValuesMock).toHaveBeenCalledWith(ThisUserEvent, {
                 ...testEventFunctions,
-                isFollowing: EventFunctions.isFollowingRequestingUser
+                isFollowedBy: EventFunctions.isFollowedByRequestingUser
             })
         })
     })
@@ -162,6 +162,14 @@ describe('EventFunctions', () => {
 
         expect(await EventFunctions.isFollowingRequestingUser(ThisUserEvent)).toBe(true)
         expect(isFollowingMock).toHaveBeenCalledWith('thisUserId')
+    });
+
+    test('isFollowedByRequestingUser should call to isFollowedBy', async () => {
+        const isFollowedByMock = jest.spyOn(ThisAccount, 'isFollowedBy')
+        isFollowedByMock.mockResolvedValue(true)
+
+        expect(await EventFunctions.isFollowedByRequestingUser(ThisUserEvent)).toBe(true)
+        expect(isFollowedByMock).toHaveBeenCalledWith('thisUserId')
     });
 
     test('cachedUsers should pull and split usersId from the query string params, if present', async () => {

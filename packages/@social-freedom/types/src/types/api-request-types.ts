@@ -1,6 +1,6 @@
 import TypeUtils from "../type-utils";
 
-export type APIRequestMessage = {
+export type AsyncAPIRequest = {
     origin: string,
     path: string,
     authToken: string,
@@ -8,6 +8,6 @@ export type APIRequestMessage = {
     requestBody?: any
 }
 
-export function isAPIRequestMessage(object: any): object is APIRequestMessage {
-    return TypeUtils.isType('APIRequestMessage', object, 'origin', 'path', 'authToken', 'requestMethod')
+export function isAsyncAPIRequest(object: any): object is AsyncAPIRequest {
+    return TypeUtils.isType('AsyncAPIRequest', object, 'origin', 'path', 'authToken', 'requestMethod')
 }

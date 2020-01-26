@@ -30,7 +30,7 @@ describe("internalFollowRequestCreate", () => {
 
         expect(mockedDynamo.addToSet).toHaveBeenCalledWith('AccountDetails', AccountDetailsOutgoingFollowRequestsKey, 'followingUserId')
         expect(mockedTrackedAccounts.put).toHaveBeenCalledWith(FollowingAccountDetails)
-        expect(mockedUserAPI.queueRequest).toHaveBeenCalledWith('myApiDomain.com', 'internal/async/follow-requests',
+        expect(mockedUserAPI.asyncRequest).toHaveBeenCalledWith('myApiDomain.com', 'internal/async/follow-requests',
             'authToken', 'POST', FollowingAccountDetails)
     })
 })

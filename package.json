@@ -51,7 +51,6 @@
     "aws-sdk-mock": "^5.0.0",
     "jest": "^24.9.0",
     "lerna": "^3.20.1",
-    "react-scripts": "3.3.0",
     "request": "^2.88",
     "ts-jest": "^24.2.0",
     "ts-node": "^8.5.4",

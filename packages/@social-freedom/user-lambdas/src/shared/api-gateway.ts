@@ -65,9 +65,9 @@ const APIGateway = {
     followerAPIIdentityCheck: async <T extends APIGatewayEventFunctions, U extends DefaultEventValues & { [key in keyof T]: any }>(event: APIGatewayEvent, eventFunctions: T = {} as T): Promise<U> => {
         const resolvedEventValues: U = await APIGateway.resolveEventValues(event, {
             ...eventFunctions,
-            isFollowing: EventFunctions.isFollowingRequestingUser
+            isFollowedBy: EventFunctions.isFollowedByRequestingUser
         })
-        if (!resolvedEventValues.isFollowing) {
+        if (!resolvedEventValues.isFollowedBy) {
             throw new Error(`Unauthorized userId: ${resolvedEventValues.userId}`)
         }
 
@@ -98,6 +98,11 @@ export const EventFunctions = {
     // should only be used within follower-api lambdas
     isFollowingRequestingUser: (event: APIGatewayEvent): Promise<boolean> => {
         return ThisAccount.isFollowing(EventFunctions.getUserId(event))
+    },
+
+    // should only be used within follower-api lambdas
+    isFollowedByRequestingUser: (event: APIGatewayEvent): Promise<boolean> => {
+        return ThisAccount.isFollowedBy(EventFunctions.getUserId(event))
     },
 
     cachedUsers: (event: APIGatewayEvent) => {
