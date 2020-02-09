@@ -8,21 +8,13 @@ import Dynamo from "../src/services/dynamo";
 import SNS from "../src/services/sns";
 
 const testPost = {
-    id: "id",
-    timestamp: 67890,
+    id: "someUUID",
+    timestamp: 1234567890,
     userId: "thisUserId",
     type: PostType.Text,
     body: "postBody",
     mediaUrl: "postMediaUrl"
 }
-
-jest.mock('uuid', () => ({
-    v1: () => {
-        return "someUUID"
-    }
-}))
-
-jest.spyOn(global.Date, 'now').mockImplementation(() => 1234567890)
 
 beforeAll(async (done) => {
     setupEnvironmentVariables()
@@ -48,14 +40,11 @@ describe("putPost", () => {
         }
     })
 
-    it("should succeed when creating a new post", async () => {
+    it("should succeed if provided a valid post", async () => {
         setAWSMock(putItemMock, Promise.resolve())
         setAWSMock(publishMock, Promise.resolve())
 
-        await putPost({
-            ...testPost,
-            id: undefined
-        })
+        await putPost(testPost)
 
         expect(putItemMock).toHaveBeenCalledWith({
             TableName: 'PostsTableName',
@@ -82,38 +71,6 @@ describe("putPost", () => {
                     ...testPost,
                     id: "someUUID"
                 }
-            })
-        })
-    });
-
-    it("should succeed when updating a post", async () => {
-        setAWSMock(putItemMock, Promise.resolve())
-        setAWSMock(publishMock, Promise.resolve())
-
-        await putPost(testPost)
-
-        expect(putItemMock).toHaveBeenCalledWith({
-            TableName: 'PostsTableName',
-            Item: {
-                "key": {S: "Posts"},
-                "id": {S: "id"},
-                "userId": {S: "thisUserId"},
-                "timeSortKey": {S: "1234567890-id"},
-                "timestamp": {N: "1234567890"},
-                "type": {S: "Text"},
-                "body": {S: "postBody"},
-                "mediaUrl": {S: "postMediaUrl"}
-            }
-        })
-        expect(publishMock).toHaveBeenCalledWith({
-            TopicArn: "postsTopic",
-            Message: JSON.stringify({
-                id: "id",
-                timestamp: 1234567890,
-                type: 'Post',
-                operation: 'Create',
-                userId: process.env.USER_ID,
-                body: testPost
             })
         })
     });

@@ -7,6 +7,8 @@ import {AccountDetailsFollowingKey, AccountDetailsOutgoingFollowRequestsKey} fro
 import {TestAccountDetails} from "../../../types/test/types/shared";
 import UserAPI from "../../src/services/user-api";
 import {FollowRequestResponse} from "../../../types/src";
+import ThisAccount from "../../src/daos/this-account";
+import {ReducedAccountDetails} from "@social-freedom/types";
 
 jest.mock("../../src/services/dynamo")
 const mockedDynamo = Dynamo as jest.Mocked<typeof Dynamo>
@@ -19,6 +21,9 @@ const mockedSNS = SNS as jest.Mocked<typeof SNS>
 
 jest.mock("../../src/services/user-api")
 const mockedUserAPI = UserAPI as jest.Mocked<typeof UserAPI>
+
+jest.mock("../../src/daos/this-account")
+const mockedThisAccount = ThisAccount as jest.Mocked<typeof ThisAccount>
 
 beforeAll(done => {
     setupEnvironmentVariables()
@@ -61,6 +66,7 @@ describe('handleFollowRequestResponse', () => {
 describe('asyncFollowRequestCreate', () => {
     it('expects a valid response', async () => {
         allowSynchronousApiRequests()
+        mockedThisAccount.getDetails.mockResolvedValue({} as unknown as ReducedAccountDetails)
         mockedUserAPI.request.mockResolvedValue({response: {}})
         const mockedResponseHandler = jest.spyOn(FollowRequests, 'handleFollowRequestResponse')
 
@@ -70,20 +76,24 @@ describe('asyncFollowRequestCreate', () => {
         } catch (err) {
             expect(err.message).toMatch(new RegExp('Invalid FollowRequestCreateResponse .*'))
         }
+        expect(mockedThisAccount.getDetails).toHaveBeenCalled()
         expect(mockedResponseHandler).not.toHaveBeenCalled()
     })
 
     it('does no follow-up if there is no auto-response', async () => {
         allowSynchronousApiRequests()
+        mockedThisAccount.getDetails.mockResolvedValue({} as unknown as ReducedAccountDetails)
         mockedUserAPI.request.mockResolvedValue({})
         const mockedResponseHandler = jest.spyOn(FollowRequests, 'handleFollowRequestResponse')
 
         await FollowRequests.asyncFollowRequestCreate('authToken', TestAccountDetails)
+        expect(mockedThisAccount.getDetails).toHaveBeenCalled()
         expect(mockedResponseHandler).not.toHaveBeenCalled()
     })
 
     it('handles an auto-response', async () => {
         allowSynchronousApiRequests()
+        mockedThisAccount.getDetails.mockResolvedValue({} as unknown as ReducedAccountDetails)
         const response: FollowRequestResponse = {
             accepted: false,
             accountDetails: TestAccountDetails
@@ -94,6 +104,7 @@ describe('asyncFollowRequestCreate', () => {
         const mockedResponseHandler = jest.spyOn(FollowRequests, 'handleFollowRequestResponse')
 
         await FollowRequests.asyncFollowRequestCreate('authToken', TestAccountDetails)
+        expect(mockedThisAccount.getDetails).toHaveBeenCalled()
         expect(mockedResponseHandler).toHaveBeenCalledWith(response)
     })
 })

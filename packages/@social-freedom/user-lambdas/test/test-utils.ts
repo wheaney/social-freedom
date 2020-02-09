@@ -1,10 +1,13 @@
-import {AccountDetails, ReducedAccountDetails, AsyncAPIRequest} from "@social-freedom/types"
+import {AccountDetails, ReducedAccountDetails, AsyncAPIRequest, Profile} from "@social-freedom/types"
 import {AWSError, Request} from "aws-sdk";
 import {PromiseResult} from "aws-sdk/lib/request";
 import {TestObject} from "../../types/test/types/shared";
 import {AuthTokenHeaderName} from "../src/shared/constants";
 import {APIGatewayEvent} from "aws-lambda";
 
+export const TestMinimalProfile: Profile = {
+    name: "Testy McTesterson"
+}
 export const FollowingAccountDetailsFull:AccountDetails = {
     userId: "followingUserId",
     identifiers: {

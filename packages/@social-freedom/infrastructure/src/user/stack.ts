@@ -136,8 +136,8 @@ export class UserStack extends cdk.Stack {
 
         const LambdaCode = Code.fromAsset('./node_modules/@social-freedom/user-lambdas')
         const SNSLambdas = new LambdaHelper(this, ExecutionerRole, EnvironmentVariables, LambdaCode)
-        const ProfileEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-profile-events')
-        const PostEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-post-events')
+        const ProfileEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-profile-events', true)
+        const PostEventsHandler = SNSLambdas.constructLambda('sns-handle-following-account-post-events', true)
         PostEventsHandler.addPermission('PostEventHandlerLambdaPermission', {
             action: 'lambda:InvokeFunction',
             principal: new ServicePrincipal("sns.amazonaws.com")

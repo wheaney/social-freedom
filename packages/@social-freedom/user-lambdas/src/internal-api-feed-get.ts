@@ -35,7 +35,7 @@ export const feedGet = async (request: GetFeedRequest): Promise<GetFeedResponse>
 }
 
 export const dynamoValueToFeedEntry = (value: AttributeMap): FeedEntry => {
-    const postDetails = JSON.parse(value['body'].S)
+    const postDetails = JSON.parse(value?.['body']?.S)
     if (isPostDetails(postDetails)) {
         return {
             id: value['id'].S,

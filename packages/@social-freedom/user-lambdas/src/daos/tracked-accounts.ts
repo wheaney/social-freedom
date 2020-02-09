@@ -1,6 +1,7 @@
 import {AttributeMap} from "aws-sdk/clients/dynamodb";
-import {isReducedAccountDetails, ReducedAccountDetails, UserDetails} from "@social-freedom/types";
+import {isReducedAccountDetails, Optional, ReducedAccountDetails, UserDetails} from "@social-freedom/types";
 import Dynamo from "../services/dynamo";
+import Helpers from "../shared/helpers";
 
 const TrackedAccounts = {
     put: async (trackedAccount: ReducedAccountDetails) => {
@@ -12,7 +13,7 @@ const TrackedAccounts = {
                 postsTopicArn: {S: trackedAccount.postsTopicArn},
                 profileTopicArn: {S: trackedAccount.profileTopicArn},
                 name: {S: trackedAccount.name},
-                photoUrl: !!trackedAccount.photoUrl ? {S: trackedAccount.photoUrl} : undefined
+                photoUrl: Optional.of(trackedAccount.photoUrl).map(Helpers.toDynamoString).get()
             }
         }).promise()
     },
@@ -24,7 +25,7 @@ const TrackedAccounts = {
             postsTopicArn: map?.['postsTopicArn']?.S,
             profileTopicArn: map?.['profileTopicArn']?.S,
             name: map?.['name']?.S,
-            photoUrl: map?.['photoUrl'] ? map['photoUrl']?.S : undefined
+            photoUrl: map?.['photoUrl']?.S
         }
         if (isReducedAccountDetails(trackedAccount)) {
             return trackedAccount
@@ -39,13 +40,9 @@ const TrackedAccounts = {
             Key: {
                 userId: {S: userId}
             }
-        }).promise())?.Item
+        }).promise())
 
-        if (!!requesterDetailsItem) {
-            return TrackedAccounts.attributeMapToTrackedAccount(requesterDetailsItem)
-        } else {
-            return undefined
-        }
+        return Optional.of(requesterDetailsItem?.Item).map(TrackedAccounts.attributeMapToTrackedAccount).get()
     },
 
     getAll: async (userIds: string[], excludeIds: string[] = []):Promise<UserDetails> => {

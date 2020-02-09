@@ -19,6 +19,8 @@ export const isValidAndRelevant = async (feedEntry: FeedEntry, eventTopicArn: st
         // check that this came from an expected posts topic ARN
         const accountDetails = await TrackedAccounts.get(feedEntry.userId)
         return accountDetails?.postsTopicArn === eventTopicArn
+
+        // TODO - verify signature
     }
 
     return false

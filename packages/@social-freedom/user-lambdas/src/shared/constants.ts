@@ -4,6 +4,7 @@ export const FeedTablePartitionKey = "Feed"
 
 // AccountDetails table
 export const AccountDetailsIsPublicKey = "IsPublic"
+export const AccountDetailsProfileKey = "Profile"
 export const AccountDetailsIncomingFollowRequestsKey = "IncomingFollowRequests"
 export const AccountDetailsOutgoingFollowRequestsKey = "OutgoingFollowRequests"
 export const AccountDetailsRejectedFollowRequestsKey = "RejectedFollowRequests"

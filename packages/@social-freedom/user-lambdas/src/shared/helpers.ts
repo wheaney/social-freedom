@@ -1,4 +1,5 @@
 import {DynamoDB} from "aws-sdk";
+import {AttributeValue} from "aws-sdk/clients/dynamodb";
 
 const Helpers = {
     resolveInObject: async <T, U extends { [key in keyof T]: any }>(object: T): Promise<U> => {
@@ -41,7 +42,9 @@ const Helpers = {
         }
 
         return undefined
-    }
+    },
+
+    toDynamoString: (val: string):AttributeValue => ({ S: val })
 }
 
 export default Helpers
