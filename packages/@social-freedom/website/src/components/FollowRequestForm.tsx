@@ -3,6 +3,8 @@ import {Form, Header} from "semantic-ui-react";
 import Follows from "../services/Follows";
 import {FollowRequest, ReducedAccountDetails} from "@social-freedom/types";
 import {SessionContext} from "../contexts/SessionContext";
+import Profile from "../services/Profile";
+import {InputOnChangeData} from "semantic-ui-react/dist/commonjs/elements/Input/Input";
 
 type State = FollowRequest & {
     apiOriginError?: boolean,
@@ -30,9 +32,11 @@ export default class FollowRequestForm extends Component<{}, State> {
         this.submitRequest = this.submitRequest.bind(this)
     }
 
-    handleChange(e: any, data: { [key: string]: any }) {
-        // @ts-ignore
-        this.setState({[data.name]: data.value})
+    handleChange(e: any, {name, value}: InputOnChangeData) {
+        this.setState({
+            ...this.state,
+            [name]: value
+        })
     }
 
     async submitRequest() {
@@ -44,10 +48,10 @@ export default class FollowRequestForm extends Component<{}, State> {
             userIdError: !this.state.userId
         }
 
+        const internalApiOrigin = this.context.auth.accountIdentifiers?.apiOrigin
         if (!stateUpdate.apiOriginError && !stateUpdate.postsTopicArnError && !stateUpdate.profileTopicArnError
-            && !stateUpdate.nameError && !stateUpdate.userIdError) {
-            // @ts-ignore
-            await Follows.createFollowRequest(this.context.auth.accountIdentifiers.apiOrigin, this.state as ReducedAccountDetails)
+            && !stateUpdate.nameError && !stateUpdate.userIdError && internalApiOrigin) {
+            await Follows.createFollowRequest(internalApiOrigin, this.state as ReducedAccountDetails)
             this.setState({
                 apiOrigin: '',
                 name: '',

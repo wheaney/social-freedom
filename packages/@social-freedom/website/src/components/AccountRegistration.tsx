@@ -113,8 +113,7 @@ export default class AccountRegistration extends Component<Properties, State> {
     }
 
     render() {
-        // @ts-ignore
-        const identityId = this.context.auth.identity.id
+        const identityId = this.context?.auth?.identity?.id
         return <Container>
             <Message>
                 <Message.Header>Register your account stack</Message.Header>

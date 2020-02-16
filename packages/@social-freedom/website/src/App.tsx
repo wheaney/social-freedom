@@ -1,5 +1,5 @@
 import React, {Component} from 'react'
-import {Button, Container, Form, Grid, Loader, Menu, Placeholder, Segment, Visibility} from 'semantic-ui-react'
+import {Button, Container, Dropdown, Item, Loader, Menu, Placeholder, Segment, Visibility} from 'semantic-ui-react'
 import Auth from "./services/Auth";
 import {AuthDetails} from "@social-freedom/types";
 import NewsFeed from "./components/NewsFeed";
@@ -8,9 +8,10 @@ import HomepageContent from "./components/HomepageContent";
 import Footer from "./components/Footer";
 import AccountRegistration from "./components/AccountRegistration";
 import {UserDetails} from "../../types/src";
-import { SessionContext } from './contexts/SessionContext';
+import {SessionContext} from './contexts/SessionContext';
 import FollowRequestForm from "./components/FollowRequestForm";
 import IncomingFollowRequests from "./components/IncomingFollowRequests";
+import ProfileForm from "./components/ProfileForm";
 
 type AppState = {
     menuFixed: boolean,
@@ -72,6 +73,7 @@ class App extends Component<{}, AppState> {
 
     hideFixedMenu = () => this.setState({menuFixed: false})
     showFixedMenu = () => this.setState({menuFixed: true})
+
     render() {
         const {identityLoading, authDetails, menuFixed} = this.state
         const isAuthenticated = authDetails.isAuthenticated
@@ -103,19 +105,14 @@ class App extends Component<{}, AppState> {
                     <Placeholder inverted>
                         <Placeholder.Line length={'long'}/>
                     </Placeholder> ||
-                    <Grid columns={2} divided>
-                        <Grid.Row>
-                            <Grid.Column verticalAlign="middle">
-                                Welcome {authDetails.identity && authDetails.identity.username}!
-                            </Grid.Column>
-                            <Grid.Column>
-                                <Button as='a' secondary
-                                        onClick={() => window.location.href = Auth.getAuthUrl('logout')}>
-                                    Logout
-                                </Button>
-                            </Grid.Column>
-                        </Grid.Row>
-                    </Grid>}
+                    <Dropdown text={authDetails.identity?.username}>
+                        <Dropdown.Menu>
+                            <ProfileForm trigger={<Dropdown.Item text='Profile'/>}/>
+                            <Dropdown.Divider/>
+                            <Dropdown.Item text='Log out'
+                                           onClick={() => window.location.href = Auth.getAuthUrl('logout')}/>
+                        </Dropdown.Menu>
+                    </Dropdown>}
                 </Menu.Item>
             </Container>
         </Menu>
@@ -150,9 +147,11 @@ class App extends Component<{}, AppState> {
                 }}>
                     {menu}
                     {authDetails.isRegistered && <Container>
-                        <NewsFeed/>
-                        <IncomingFollowRequests />
-                        <FollowRequestForm />
+                        <Item.Group>
+                            <Item content={<NewsFeed/>}/>
+                            <Item content={<IncomingFollowRequests/>}/>
+                            <Item content={<FollowRequestForm/>}/>
+                        </Item.Group>
                     </Container> ||
                     <AccountRegistration submitSuccess={this.refreshIdentity}/>}
                 </SessionContext.Provider>

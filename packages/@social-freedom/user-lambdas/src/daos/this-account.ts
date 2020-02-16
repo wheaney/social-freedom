@@ -77,7 +77,7 @@ const ThisAccount = {
             SNS.client.publish({
                 TopicArn: process.env.PROFILE_TOPIC,
                 Message: JSON.stringify(ThisAccount.buildDetails(profile))
-            })
+            }).promise()
         ])
     },
 

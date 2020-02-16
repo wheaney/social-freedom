@@ -4,6 +4,7 @@ import {SessionContext} from "../contexts/SessionContext";
 import Follows from "../services/Follows";
 import {ReducedAccountDetails} from "../../../types/src";
 import {Button, Grid} from "semantic-ui-react";
+import {Optional} from "@social-freedom/types";
 
 type State = {
     requests: string[]
@@ -23,15 +24,17 @@ export default class IncomingFollowRequests extends Component<any, State> {
     }
 
     async componentDidMount(): Promise<void> {
-        // @ts-ignore
-        const followRequestsResponse = await Follows.getFollowRequests(this.context.auth.accountIdentifiers.apiOrigin, this.context.users)
+        const internalApiOrigin = this.context.auth.accountIdentifiers?.apiOrigin
+        if (internalApiOrigin) {
+            const followRequestsResponse = await Follows.getFollowRequests(internalApiOrigin,
+                Optional.of(this.context.users).map(Object.keys).get())
 
-        this.setState({
-            requests: followRequestsResponse.userIds
-        })
+            this.setState({
+                requests: followRequestsResponse.userIds
+            })
 
-        // @ts-ignore
-        this.context.updateUsers(followRequestsResponse.users)
+            this.context?.updateUsers?.(followRequestsResponse.users)
+        }
     }
 
     sortedRequests(): ReducedAccountDetails[] {
@@ -39,11 +42,13 @@ export default class IncomingFollowRequests extends Component<any, State> {
     }
 
     async respondToRequest(userId: string, accepted: boolean): Promise<void> {
-        // @ts-ignore
-        await Follows.respondToRequest(this.context.auth.accountIdentifiers.apiOrigin, userId, accepted)
-        this.setState({
-            requests: this.state.requests.filter(requestUserId => requestUserId !== userId)
-        })
+        const internalApiOrigin = this.context.auth.accountIdentifiers?.apiOrigin
+        if (internalApiOrigin) {
+            await Follows.respondToRequest(internalApiOrigin, userId, accepted)
+            this.setState({
+                requests: this.state.requests.filter(requestUserId => requestUserId !== userId)
+            })
+        }
     }
 
     render() {

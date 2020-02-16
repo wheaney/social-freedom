@@ -9,6 +9,10 @@ export type Profile = {
     birthday?: Date
 }
 
+export function isProfile(object: any): object is Profile {
+    return TypeUtils.isType('Profile', object, 'name')
+}
+
 export type BasicAccountIdentifiers = {
     accountId: string,
     region: string,

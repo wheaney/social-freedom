@@ -147,6 +147,15 @@ export class UserStack extends cdk.Stack {
             topic: PostsTopic,
             protocol: SubscriptionProtocol.LAMBDA
         })
+        ProfileEventsHandler.addPermission('ProfileEventHandlerLambdaPermission', {
+            action: 'lambda:InvokeFunction',
+            principal: new ServicePrincipal("sns.amazonaws.com")
+        })
+        new Subscription(this, 'ProfileTopicLambdaSubscription', {
+            endpoint: ProfileEventsHandler.functionArn,
+            topic: ProfileTopic,
+            protocol: SubscriptionProtocol.LAMBDA
+        })
 
         const RequesterRole = new Role(this, "Requester", {
             assumedBy: new ServicePrincipal("lambda.amazonaws.com")
@@ -187,6 +196,7 @@ export class UserStack extends cdk.Stack {
         ApiUtils.constructLambdaApi(InternalApi, 'follow-request-response', 'POST', 'internal-api-follow-request-respond')
         ApiUtils.constructLambdaApi(InternalApi, 'posts', 'POST', 'internal-api-post-create')
         ApiUtils.constructLambdaApi(InternalApi, 'feed', 'GET', 'internal-api-feed-get')
+        ApiUtils.constructLambdaApi(InternalApi, 'profile', 'PUT', 'internal-api-profile-put')
 
         /**
          * Methods exposed under /internal/async can perform long-running tasks, such as making

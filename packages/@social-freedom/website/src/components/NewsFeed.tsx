@@ -1,7 +1,7 @@
 import * as React from 'react'
 import {Component} from 'react'
 import {FeedEntry} from "@social-freedom/types";
-import {Feed, Form, Image, Loader} from "semantic-ui-react";
+import {Feed, Form, Image, Loader, TextAreaProps} from "semantic-ui-react";
 import {SessionContext} from "../contexts/SessionContext";
 import Posts from "../services/Posts";
 import {default as FeedService} from "../services/Feed";
@@ -40,20 +40,23 @@ export default class NewsFeed extends Component<any, State> {
             loading: true
         })
 
-        // @ts-ignore
-        const apiOrigin = this.context.auth.accountIdentifiers.apiOrigin
-        const cachedUsers = Object.keys(this.context.users)
-        const result = await FeedService.getFeed(apiOrigin, cachedUsers)
-        this.setState({
-            loading: false,
-            entries: result.entries
-        })
-        this.context.updateUsers && this.context.updateUsers(result.users)
+        const internalApiOrigin = this.context.auth.accountIdentifiers?.apiOrigin
+        if (internalApiOrigin) {
+            const cachedUsers = Object.keys(this.context.users)
+            const result = await FeedService.getFeed(internalApiOrigin, cachedUsers)
+            this.setState({
+                loading: false,
+                entries: result.entries
+            })
+            this.context.updateUsers && this.context.updateUsers(result.users)
+        }
     }
 
-    handleChange(e: any, data: { [key: string]: any }) {
-        // @ts-ignore
-        this.setState({[data.name]: data.value})
+    handleChange(e: any, {name, value}: TextAreaProps) {
+        this.setState({
+            ...this.state,
+            [name]: value
+        })
     }
 
     async submitPost() {
@@ -64,13 +67,11 @@ export default class NewsFeed extends Component<any, State> {
         stateUpdate.postBodyError = !this.state.postBody
         this.setState(stateUpdate)
 
-        if (!stateUpdate.postBodyError) {
-            // @ts-ignore
-            const apiOrigin = this.context.auth.accountIdentifiers.apiOrigin;
-            // @ts-ignore
-            const userId = this.context.auth.identity.id
+        const internalApiOrigin = this.context.auth.accountIdentifiers?.apiOrigin;
+        const userId = this.context.auth.identity?.id
+        if (!stateUpdate.postBodyError && internalApiOrigin && userId) {
             try {
-                await Posts.createPost(apiOrigin, userId, this.state.postBody)
+                await Posts.createPost(internalApiOrigin, userId, this.state.postBody)
                 this.setState({
                     postSuccess: true,
                     postBody: ''
